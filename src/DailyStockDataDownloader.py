@@ -1,14 +1,15 @@
 '''
 Created on Dec 19, 2017
 
-@author: colton
+@author: Colton Freitas
 '''
-from StockDataDownloading import DownloaderYahoo
+from StockDataDownloading.DownloaderYahoo import DownloaderYahoo
 
 #TODO: Install MYSQL
-#TODO: Obtain data from the Downloading classes
 #TODO: Use uploading class to upload to the MYSQL database
-#TODO: Remove Testing Function
+#TODO: Take input from an external source for which stocks to obtain data for
 
 if __name__ == '__main__':
-    DownloaderYahoo.test()
+    yahooDownloader = DownloaderYahoo()
+    ticker_list = ["AAPL", "GOOGL", "XYZZYX"] #Temporary testing list. The last value is intentionally wrong
+    data, errored = yahooDownloader.getHistoricalData(ticker_list)

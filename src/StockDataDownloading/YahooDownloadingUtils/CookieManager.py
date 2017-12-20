@@ -44,7 +44,6 @@ class CookieManager(object):
         #Grab the cookie from the http header
         cookiestr = httpresponse.getheader('set-cookie')
         cookiestr = cookiestr.split('; expires')[0]
-        cookiestr = cookiestr[2:]
         self.__cookie = cookiestr
         
         #Grab the crumb from the webpage
