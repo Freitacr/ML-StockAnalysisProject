@@ -5,7 +5,6 @@ Created on Dec 19, 2017
 '''
 from StockDataDownloading.DownloaderYahoo import DownloaderYahoo
 
-#TODO: Install MYSQL
 #TODO: Use uploading class to upload to the MYSQL database
 #TODO: Take input from an external source for which stocks to obtain data for
 
