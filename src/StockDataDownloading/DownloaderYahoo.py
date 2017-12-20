@@ -88,19 +88,9 @@ class DownloaderYahoo:
         else:
             eprint("Ticker {0} errored with HTTP code {1}".format(ticker, stat[1]))
             return [False]
-    
-
-# TODO: Remove testing function and flush out the real functions
-#time.time() returns time since epoch.
 
 def test():
     cookieMan = cm.CookieManager()
     print(cookieMan.getCookie())
     print(cookieMan.getCrumb())
-    
-#def getHistoricalData(ticker_list, max_number_of_days=-1)
-#Docstring discussing the arguments and the purpose of the function
-
-#def __getDataForTicker(ticker, max_number_of_days)
-#Docstring noting its relation to getHIstoricalData
 
