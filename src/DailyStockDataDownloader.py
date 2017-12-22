@@ -4,20 +4,19 @@ Created on Dec 19, 2017
 @author: Colton Freitas
 '''
 from StockDataDownloading.DownloaderYahoo import DownloaderYahoo
-from StockDataMYSQLUploading.MYSQLUtils.MYSQLUtils import connect as MYSQLConnect
-#TODO: Use uploading class to upload to the MYSQL database
+from StockDataMYSQLUploading.MSYQLDataUploader import MYSQLDataManipulator
+from mysql.connector.dbapi import Date
 #TODO: Take input from an external source for which stocks to obtain data for
-
-
-def testMYSQL():
-    sqlConnection = MYSQLConnect("localhost", "user", "Sora1674@", "conn_test")
-    return sqlConnection
-
+#TODO: Find best way to save password so it isn't readable when not in use
+#TODO: Handle duplicate avoidance here after the download phase
 
 if __name__ == '__main__':
-    yahooDownloader = DownloaderYahoo()
-    ticker_list = ["AAPL", "GOOGL", "XYZZYX"] #Temporary testing list. The last value is intentionally wrong
-    data, errored = yahooDownloader.getHistoricalData(ticker_list)
-    
-    testMYSQL()
+    yah = DownloaderYahoo()
+    dat, errored = yah.getHistoricalData(['AAPL'])
+    dat2, errored = yah.getHistoricalData(['GOOGL'])
+    dat.extend(dat2)
+    print(len(dat))
+    for ticker in dat:
+        for day in range(5):
+            print(ticker[1][day])
     
