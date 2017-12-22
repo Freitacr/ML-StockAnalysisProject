@@ -63,14 +63,14 @@ class DownloaderYahoo:
             start_date = datetime.now()
             period2 = round(start_date.timestamp())
         else:
-            period2 = start_date.timestamp()
+            period2 = round(start_date.timestamp())
         
         #Use start_date and max_number_of_days to calculate the lower bound of the data retrieval period
         #(in the number of seconds since the Epoch)
         if max_number_of_days == -1:
             period1 = 0
         else:
-            period1 = (start_date - timedelta(days = max_number_of_days)).timestamp()
+            period1 = round((start_date - timedelta(days = max_number_of_days)).timestamp())
         
         
         #Setup full download URL from the base
