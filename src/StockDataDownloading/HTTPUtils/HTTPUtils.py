@@ -4,7 +4,6 @@ Created on Dec 19, 2017
 @author: Colton Freitas
 '''
 import urllib.request as ureq
-from GeneralUtils.EPrint import eprint
 from urllib.error import HTTPError
 
 
@@ -18,8 +17,7 @@ def openURL(url, cookie = None):
     try:
         hres = opener.open(url)
     except HTTPError as e:
-        eprint(str(e))
-        return [False, str(e)]
+        return [False, (e)]
     if not str(hres.getcode())[0] == '2':
         return [False, hres.getcode()]
     else:
