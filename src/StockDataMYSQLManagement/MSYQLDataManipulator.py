@@ -96,10 +96,13 @@ class MYSQLDataManipulator:
     def __switch_database(self, database, cursor):
         cursor.execute("USE %s" % database)
         
-    def select_from_table(self, table_name, column_list, database = None):
+    def select_from_table(self, table_name, column_list, database = None, conditional = None):
         column_string = ",".join(column_list)
         
         sql = "select %s from %s" % (column_string, table_name)
+        
+        if not conditional == None:
+            sql += " %s" % conditional
         
         cursor = self.connection.cursor()
         
