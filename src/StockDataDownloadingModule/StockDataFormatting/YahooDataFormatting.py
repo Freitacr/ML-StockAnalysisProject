@@ -118,7 +118,6 @@ class YahooDataFormatting:
             
             if stored_days == None:
                 download_days.extend([[ticker.upper(), 'all']])
-                continue
             else:
                 start_date = stored_days[0][0]
                 if stored_days[0][1] == -1:

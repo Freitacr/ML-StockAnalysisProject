@@ -108,7 +108,7 @@ if __name__ == '__main__':
                     data_manager.create_table("%s_%s_data" % (stock_ticker, source_string), creation_col_list)
                     for day_data in ticker_data[1]:
                         convertAndInsertData(day_data, source_string, stock_ticker)
-                    data_manager.execute_sql( ("update stock_list") + (" set %s=1" % source_string) + (' where ticker = \'%s\'' % (stock_ticker)))
+                    data_manager.execute_sql( ("update %s_%s_data" % (stock_ticker, source_string)) + (" %s=1" % source_string) + (' where ticker = \'%s\'' % (stock_ticker)))
                 else:
                     data_manager.create_table("%s_%s_data" % (stock_ticker, source_string), creation_col_list)
                     for day_data in ticker_data[1]:
