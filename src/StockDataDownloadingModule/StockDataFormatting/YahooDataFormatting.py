@@ -4,8 +4,8 @@ Created on Dec 22, 2017
 @author: Colton Freitas
 '''
 
-from StockDataDownloading.DownloaderYahoo import DownloaderYahoo
-from StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLDataManipulator
+from StockDataDownloading.DownloaderYahoo import DownloaderYahoo # @UnresolvedImport
+from GeneralUtils.StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLDataManipulator
 from datetime import datetime as dt, timedelta
 from mysql.connector.errors import ProgrammingError
 

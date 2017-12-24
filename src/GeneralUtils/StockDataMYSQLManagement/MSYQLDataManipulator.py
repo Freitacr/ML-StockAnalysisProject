@@ -4,7 +4,7 @@ Created on Dec 20, 2017
 @author: Colton Freitas
 '''
 
-from StockDataMYSQLManagement.MYSQLUtils.MYSQLUtils import connect as SQLConnect
+from .MYSQLUtils.MYSQLUtils import connect as SQLConnect
 from pandas.io import sql
 from mysql.connector.errors import InterfaceError
 
