@@ -3,9 +3,9 @@ Created on Dec 19, 2017
 
 @author: Colton Freitas
 '''
-from StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLDataManipulator
+from GeneralUtils.StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLDataManipulator
 from datetime import datetime as dt
-from StockDataFormatting.DataFormatting import DataFormatter
+from StockDataFormatting.DataFormatting import DataFormatter  # @UnresolvedImport
 from configparser import ConfigParser, NoSectionError, NoOptionError
 
 def write_default_configs(parser, file_position):
@@ -19,7 +19,7 @@ def write_default_configs(parser, file_position):
     fp.close()
 
 def config_handling():
-    file_position = "../configuration_data/config.ini"
+    file_position = "../../configuration_data/config.ini"
     parser = ConfigParser()
     try:
         fp = open(file_position, 'r')
@@ -68,7 +68,7 @@ def convertAndInsertData(day_data, source_string, stock_ticker):
     data_manager.insert_into_table("%s_%s_data" % (stock_ticker, source_string), col_list, [upload_data])
     
 def get_stock_list():
-    file = open("../configuration_data/stock_list.txt", 'r')
+    file = open("../../configuration_data/stock_list.txt", 'r')
     return_data = []
     for line in file:
         return_data.extend([line.strip()])
