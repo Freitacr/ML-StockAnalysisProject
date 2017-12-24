@@ -63,13 +63,14 @@ class YahooDataFormatting:
                 for index in range(len(download_days)):
                     download_days[index] = download_days[index].isoformat()
                 
-                ticker_ret = []
-                for x in data_ticker[1]:
-                    for d_day in download_days:
-                        if x[0].split(",")[0] == d_day:
-                            download_days.remove(d_day)
-                            ticker_ret.extend(x)
-                            break
+                #what follows is code to make the weekends and weekdays that are missed a part of the dataset using special markings
+                #ticker_ret = []
+                #for x in data_ticker[1]:
+                #    for d_day in download_days:
+                #        if x[0].split(",")[0] == d_day:
+                #            download_days.remove(d_day)
+                #            ticker_ret.extend(x)
+                #            break
                 #Do custom filling for days that are weirdly missed. 
                 #for d_day in download_days:
                 #    replace_string = "%s,%s,%s,%s,%s,%s,%s\n"
@@ -78,12 +79,11 @@ class YahooDataFormatting:
                 #        replace_string = replace_string % (d_day, "-", "-", "-", "-", "-", "-")
                 #    else:
                 #        replace_string = replace_string % (d_day, "!", "!", "!", "!", "!", "!")
-                    
-                    
                 #    ticker_ret.extend([replace_string])
+                #This is commented out since it is still up in the air about whether it should be used or not. It works, however.
                 ticker_ret = [x for x in data_ticker[1] if x[0].split(",")[0] in download_days]
             elif download_days == 'all':
-                ticker_ret = data_ticker[1]
+                ticker_ret = data_ticker[1][1:]
             else:
                 ticker_ret = None
             
