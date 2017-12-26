@@ -112,7 +112,7 @@ class NaiveBayes:
 					table_split = file.readline().split(" ")
 					for col in range(num_cols):
 						self.feature_probability_tables[feature_dict_index][row][col] = table_split[col].rstrip()
-		except IndexError, FileNotFoundError:
+		except (IndexError, FileNotFoundError):
 			return False
 
 	#Checks if the label exists in the dictionary passed, and returns its value. If not, returns -1
