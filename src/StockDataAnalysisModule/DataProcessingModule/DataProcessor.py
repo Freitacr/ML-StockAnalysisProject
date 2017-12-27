@@ -79,7 +79,9 @@ class DataProcessor:
                     X.extend([full_list])
                 Y.extend([class_data[example_index]])
             ret_dict[input_data[ticker_index][0]] = [X, Y]
-        return ProcessedDataHolder(ret_dict)    
+        return ProcessedDataHolder(ret_dict)   
+    
+     
     def getMovementDirections(self, column_list, max_number_of_days_per_example = 5):
         retrieved_data = self.getPercentageChanges(column_list, max_number_of_days_per_example=-1)
         for x in retrieved_data:
@@ -107,6 +109,37 @@ class DataProcessor:
                 target_data.extend([[ticker, tar_data]])
             
             return self.__gen_training_examples(max_number_of_days_per_example, input_data, target_data)
+
+    def getLimitedNumericalChange(self, column_list, max_number_of_days_per_example = 5):
+        retrieved_data = self.getPercentageChanges(column_list, max_number_of_days_per_example=-1)
+        for x in retrieved_data:
+            for data_point in x[1]:
+                for data_type_index in range(len(data_point)):
+                    if int(data_point[data_type_index]) >= 6:
+                        data_point[data_type_index] = '5+'
+                    elif int(data_point[data_type_index]) <= -6:
+                        data_point[data_type_index] = '-5+'
+                    else:
+                        data_point[data_type_index] = str(int(data_point[data_type_index]))
+        if max_number_of_days_per_example <= 0:
+            return retrieved_data
+        else:
+            input_data, target_data = [[], []]
+            for data in retrieved_data:
+                #in_data = []
+                tar_data = []
+                ticker = data[0]
+                data_arr = data[1]
+                for x in range(len(data_arr) - max_number_of_days_per_example):
+                    tar_data.extend([data_arr[x+max_number_of_days_per_example][0]])
+                input_data.extend([[ticker, data_arr]])
+                target_data.extend([[ticker, tar_data]])
+            
+            return self.__gen_training_examples(max_number_of_days_per_example, input_data, target_data)
+
+
+
+
 class ProcessedDataHolder:
     
     def __init__(self, data_dictionaries):
