@@ -46,7 +46,7 @@ def config_handling():
 if __name__ == "__main__":
     login_credentials = config_handling()
     ml_manager = MLManager(login_credentials)
-    ml_manager.basicMovementsTraining("../model_data", ml_model = 'decision_tree')
+    ml_manager.limitedNumericalChangeTraining("../model_data", ml_model = 'decision_tree')
     print("Finished")
 
 

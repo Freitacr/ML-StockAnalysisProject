@@ -14,39 +14,22 @@ class MLManager:
         self.data_handler = DataProcessor(login_credentials)
         self.valid_models = ["naive_bayes", "decision_tree"]
         
-    def basicMovementsTraining(self, ML_Dir, ml_model = "naive_bayes"):
-        if not ml_model.lower() in self.valid_models:
-            raise ValueError("Invalid model %s\nValid Models: %s" % (ml_model, str(self.valid_models)))
-        info_man = InfoManager()
-        ticker_data = self.data_handler.getMovementDirections(['adj_close', 'opening_price', 'close_price'], max_number_of_days_per_example = 30)
-        stored_tickers = ticker_data.getContained_tickers()
+    def __getModelFromString(self, ml_model):
         if ml_model.lower() == 'naive_bayes':
-            cross_model = NaiveBayes.NaiveBayes(assume_all_features_known=False)
             ret_model = NaiveBayes.NaiveBayes(assume_all_features_known=False)
         elif ml_model.lower() == 'decision_tree':
-            cross_model = DecisionTree.DecisionTree()
             ret_model = DecisionTree.DecisionTree()
         elif ml_model.lower() == 'knn':
-            cross_model = KNN.KNN()
             ret_model = KNN.KNN()
-        X,Y = [[], []]
-        for ticker in stored_tickers:
-            data = ticker_data.getTickerData(ticker)
-            X.extend(data[0])
-            Y.extend(data[1])
-        print("Beginning Training...")
-        ret_model.train(X, Y)
-        print("Training completed.")
-        
-        info_man.addSectionWithOptions("overall", self.__overallCrossfoldAccuracy(cross_model, ticker_data))
-        #print("For overall:", self.__naiveBayesAccuracyTesting(big_bayes, ticker_data))
-        info_man.writeFile(ML_Dir + "/%s_movement_direction_models.mlinf" % (ml_model))
-        ret_model.store(ML_Dir + "/%s_movement_direction_models.mlmdl" % (ml_model))
-        
+        return ret_model
+    
     def __overallCrossfoldAccuracy(self, model, ticker_data):
         ret_dict = {}
         stored_tickers = ticker_data.getContained_tickers()
+        print("Started Cross-fold training")
+        num_completed = 0
         for ticker in stored_tickers:
+            num_completed += 1
             correct = 0
             testX, testY = ticker_data.getTickerData(ticker)
             X, Y = [[], []]
@@ -61,7 +44,52 @@ class MLManager:
                 if str(model.predict(testX[ex_index])) == str(testY[ex_index]):
                     correct += 1
             ret_dict [ticker] = correct / len(testX)
+            print("Completed cross-fold training for ticker %s out of %s", (num_completed, len(stored_tickers)))
         return ret_dict
+    
+    def __trainAndStoreModel(self, cross_model, ret_model, ticker_data, ML_Dir, methodName, ml_model):
+        info_man = InfoManager()
+        stored_tickers = ticker_data.getContained_tickers()
+        
+        X,Y = [[], []]
+        for ticker in stored_tickers:
+            data = ticker_data.getTickerData(ticker)
+            X.extend(data[0])
+            Y.extend(data[1])
+        print("Beginning Training...")
+        ret_model.train(X, Y)
+        print("Training completed.")
+        
+        info_man.addSectionWithOptions("overall", self.__overallCrossfoldAccuracy(cross_model, ticker_data))
+        #print("For overall:", self.__naiveBayesAccuracyTesting(big_bayes, ticker_data))
+        info_man.writeFile(ML_Dir + "/%s_%s.mlinf" % (ml_model, methodName))
+        ret_model.store(ML_Dir + "/%s_%s.mlmdl" % (ml_model, methodName))
+    
+    
+    
+    
+    
+    
+    
+    def basicMovementsTraining(self, ML_Dir, ml_model = "naive_bayes"):
+        if not ml_model.lower() in self.valid_models:
+            raise ValueError("Invalid model %s\nValid Models: %s" % (ml_model, str(self.valid_models)))
+        
+        ticker_data = self.data_handler.getMovementDirections(['adj_close', 'opening_price', 'close_price', 'volume_data'], max_number_of_days_per_example = 30)    
+        cross_model = self.__getModelFromString(ml_model)
+        ret_model = self.__getModelFromString(ml_model)
+        self.__trainAndStoreModel(cross_model, ret_model, ticker_data, ML_Dir, "movement_direction_models", ml_model)
+        
+    def limitedNumericalChangeTraining(self, ML_Dir, ml_model = 'naive_bayes'):
+        if not ml_model.lower() in self.valid_models:
+            raise ValueError("Invalid model %s\nValid Models: %s" % (ml_model, str(self.valid_models)))
+        
+        ticker_data = self.data_handler.getLimitedNumericalChange(['adj_close', "opening_price", "close_price"], max_number_of_days_per_example = 30)
+        cross_model = self.__getModelFromString(ml_model)
+        ret_model = self.__getModelFromString(ml_model)
+        self.__trainAndStoreModel(cross_model, ret_model, ticker_data, ML_Dir, 'Limited_Numerical_Change', ml_model)    
+    
+        
     
 class InfoManager:
     
