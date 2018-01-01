@@ -1,7 +1,7 @@
 import operator
 import math
 class KNN:
-	
+	#Deprecated
 	def __init__(self):
 		self.label_mapping_dicts = []
 		self.data_points = []
