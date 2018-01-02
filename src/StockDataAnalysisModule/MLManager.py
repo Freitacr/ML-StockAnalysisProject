@@ -8,6 +8,8 @@ from .DataProcessingModule.DataProcessor import DataProcessor
 from .MLModels import DecisionTree, NaiveBayes, KNN
 from configparser import NoSectionError, NoOptionError
 
+#TODO: Use Tolerance String Class to make a tolerant model of accuracy. 
+
 class MLManager:
     
     def __init__(self, login_credentials):
