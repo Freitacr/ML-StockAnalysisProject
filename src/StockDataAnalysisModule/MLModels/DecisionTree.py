@@ -228,6 +228,9 @@ class DecisionTree:
 		self.label_index_dictionary = {}
 		self.__root = None
 		
+	def copy_settings(self):
+		return DecisionTree()
+		
 	def load(self, fileName):
 		self.__init__()
 		model_file = None

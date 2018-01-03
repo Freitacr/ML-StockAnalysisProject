@@ -45,8 +45,10 @@ def config_handling():
 
 if __name__ == "__main__":
     login_credentials = config_handling()
+    ml_choice = 'naive_bayes'
     ml_manager = MLManager(login_credentials)
-    ml_manager.limitedNumericalChangeTraining("../model_data", ml_model = 'decision_tree')
+    print(ml_choice)
+    ml_manager.limitedNumericalChangeTraining("../model_data", ml_model = ml_choice)
     print("Finished")
 
 

@@ -116,9 +116,9 @@ class DataProcessor:
             for data_point in x[1]:
                 for data_type_index in range(len(data_point)):
                     if int(data_point[data_type_index]) >= 6:
-                        data_point[data_type_index] = '5+'
+                        data_point[data_type_index] = '5'
                     elif int(data_point[data_type_index]) <= -6:
-                        data_point[data_type_index] = '-5+'
+                        data_point[data_type_index] = '-5'
                     else:
                         data_point[data_type_index] = str(int(data_point[data_type_index]))
         if max_number_of_days_per_example <= 0:

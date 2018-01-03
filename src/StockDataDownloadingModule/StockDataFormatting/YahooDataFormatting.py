@@ -52,8 +52,8 @@ class YahooDataFormatting:
         data.extend(temp_data)
         temp_data, errored = self.data_downloader.getHistoricalData(errored)
         data.extend(temp_data)
-        
         for data_ticker in data:
+            print("Now formatting data for %s" % data_ticker[0])
             download_days = None
             for down_ticker in down_days:
                 if down_ticker[0] == data_ticker[0]:
@@ -62,7 +62,6 @@ class YahooDataFormatting:
             if not download_days == 'all':
                 for index in range(len(download_days)):
                     download_days[index] = download_days[index].isoformat()
-                
                 #what follows is code to make the weekends and weekdays that are missed a part of the dataset using special markings
                 #ticker_ret = []
                 #for x in data_ticker[1]:
