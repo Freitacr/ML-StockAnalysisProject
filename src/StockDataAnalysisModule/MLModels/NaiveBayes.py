@@ -14,7 +14,18 @@ class NaiveBayes:
 		self.class_probability_table=[]
 		self.assume_all_features_known = assume_all_features_known
 
+	def copy(self):
+		ret_model = NaiveBayes(self.assume_all_features_known)
+		ret_model.class_mapping_dictionary = self.class_mapping_dictionary.copy()
+		for self_dict in self.feature_mapping_dictionaries:
+			ret_model.feature_mapping_dictionaries.extend([self_dict.copy()])
+		for self_dict in self.feature_probability_tables:
+			ret_model.feature_probability_tables.extend([self_dict.copy()])
+		ret_model.class_probability_table = self.class_probability_table.copy()
+		return ret_model
 		
+	def copy_settings(self):
+		return NaiveBayes(self.assume_all_features_known)
 		
 	def train(self, X, Y):
 		#Generates the feature and label mapping dictionaries

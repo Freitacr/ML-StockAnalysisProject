@@ -10,9 +10,9 @@ class ToleranceString:
     
     def __init__(self, direction, amounts, zero_state = "both"):
         self.__tol_str = self.__createToleranceString(direction, amounts)
-        zero_states = ["positive", "negative", "both"]
+        zero_states = ["positive", "negative", "both", "none"]
         if not zero_state.lower() in zero_states:
-            raise ValueError("Invalid selection of zero-state, must be 'positive', 'negative', or 'both'")
+            raise ValueError("Invalid selection of zero-state, must be 'positive', 'negative', 'none', or 'both'")
         self.__zero_state = zero_states.index(zero_state.lower())
     
     def __setupToleranceString(self, direction):
@@ -50,7 +50,8 @@ class ToleranceString:
                 tol_amount = float(self.__tol_str.split(":")[1])
                 pos_flag = (actual >= expected and actual <= expected + tol_amount) or (actual >= expected + tol_amount and actual <= expected)
                 return pos_flag or neg_flag
-            #DoZeroChecking
+            elif self.__zero_state == 3:
+                return expected == actual
         elif expected < 0:
             tol_amount = float(self.__tol_str.split(":")[0])
             #One of these conditions will be impossible, this is fine. The other one will be the one to test against.

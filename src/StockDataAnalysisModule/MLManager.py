@@ -7,6 +7,7 @@ Created on Dec 25, 2017
 from .DataProcessingModule.DataProcessor import DataProcessor
 from .MLModels import DecisionTree, NaiveBayes, KNN
 from configparser import NoSectionError, NoOptionError
+from .AnalysisUtils.ToleranceString import ToleranceString
 
 #TODO: Use Tolerance String Class to make a tolerant model of accuracy. 
 
@@ -25,7 +26,8 @@ class MLManager:
             ret_model = KNN.KNN()
         return ret_model
     
-    def __overallCrossfoldAccuracy(self, model, ticker_data):
+    def __overallCrossfoldAccuracy(self, model, ticker_data, amount, numeric = False):
+        tol_string = ToleranceString('extremes', amount, zero_state="None")
         ret_dict = {}
         stored_tickers = ticker_data.getContained_tickers()
         print("Started Cross-fold training")
@@ -43,13 +45,24 @@ class MLManager:
                 Y.extend(oY)
             model.train(X,Y)
             for ex_index in range(len(testX)):
-                if str(model.predict(testX[ex_index])) == str(testY[ex_index]):
-                    correct += 1
+                if not numeric:
+                    if str(model.predict(testX[ex_index])) == str(testY[ex_index]):
+                        correct += 1
+                else:
+                    if tol_string.test(float(model.predict(testX[ex_index])), float(testY[ex_index])):
+                        correct += 1
             ret_dict [ticker] = correct / len(testX)
-            print("Completed cross-fold training for ticker %s out of %s", (num_completed, len(stored_tickers)))
+            print("Completed cross-fold training for ticker %s out of %s" % (num_completed, len(stored_tickers)))
         return ret_dict
     
-    def __trainAndStoreModel(self, cross_model, ret_model, ticker_data, ML_Dir, methodName, ml_model):
+    def __trainAndStoreModel(self, cross_model, ret_model, ticker_data, ML_Dir, methodName, ml_model, tolerant = False, amount = None, numeric = False):
+        
+        if tolerant and amount == None:
+            raise ValueError("Tolerant set to True, but no amounts were specified")
+        elif tolerant and not numeric or not tolerant and numeric:
+            raise ValueError("Tolerant accuracy can only be used on numeric data")
+        if not tolerant and numeric:
+            amount = [0,0]
         info_man = InfoManager()
         stored_tickers = ticker_data.getContained_tickers()
         
@@ -62,7 +75,7 @@ class MLManager:
         ret_model.train(X, Y)
         print("Training completed.")
         
-        info_man.addSectionWithOptions("overall", self.__overallCrossfoldAccuracy(cross_model, ticker_data))
+        info_man.addSectionWithOptions("overall", self.__overallCrossfoldAccuracy(cross_model, ticker_data, amount, numeric))
         #print("For overall:", self.__naiveBayesAccuracyTesting(big_bayes, ticker_data))
         info_man.writeFile(ML_Dir + "/%s_%s.mlinf" % (ml_model, methodName))
         ret_model.store(ML_Dir + "/%s_%s.mlmdl" % (ml_model, methodName))
@@ -89,7 +102,7 @@ class MLManager:
         ticker_data = self.data_handler.getLimitedNumericalChange(['adj_close', "opening_price", "close_price"], max_number_of_days_per_example = 30)
         cross_model = self.__getModelFromString(ml_model)
         ret_model = self.__getModelFromString(ml_model)
-        self.__trainAndStoreModel(cross_model, ret_model, ticker_data, ML_Dir, 'Limited_Numerical_Change', ml_model)    
+        self.__trainAndStoreModel(cross_model, ret_model, ticker_data, ML_Dir, 'Limited_Numerical_Change', ml_model, tolerant = True, amount = [10, 10], numeric = True)    
     
         
     
