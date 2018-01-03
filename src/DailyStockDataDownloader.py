@@ -9,6 +9,8 @@ from StockDataDownloadingModule.StockDataFormatting.DataFormatting import DataFo
 from configparser import ConfigParser, NoSectionError, NoOptionError
 
 def write_default_configs(parser, file_position):
+    '''Creates the default configuration file in file_position with default values'''
+    
     parser.add_section('login_credentials')
     parser.set('login_credentials', 'user', 'root')
     parser.set('login_credentials', 'password', "")
@@ -19,6 +21,7 @@ def write_default_configs(parser, file_position):
     fp.close()
 
 def config_handling():
+    '''does all of the configuration handling using the configparser package'''
     file_position = "../configuration_data/config.ini"
     parser = ConfigParser()
     try:
@@ -43,6 +46,7 @@ def config_handling():
 
 
 def convertAndInsertData(day_data, source_string, stock_ticker):
+    '''Converts all data into the correct format and uploads it to the MYSQL table '''
     data_string = day_data[0]
     data_split = data_string.rstrip().split(",")
     day = dt.strptime(data_split[0], "%Y-%m-%d")
@@ -68,6 +72,7 @@ def convertAndInsertData(day_data, source_string, stock_ticker):
     data_manager.insert_into_table("%s_%s_data" % (stock_ticker, source_string), col_list, [upload_data])
     
 def get_stock_list():
+    '''Obtains a list of all stock tickers to attempt to download'''
     file = open("../configuration_data/stock_list.txt", 'r')
     return_data = []
     for line in file:
