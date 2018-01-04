@@ -7,6 +7,7 @@ from GeneralUtils.StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLData
 from datetime import datetime as dt
 from StockDataDownloadingModule.StockDataFormatting.DataFormatting import DataFormatter
 from configparser import ConfigParser, NoSectionError, NoOptionError
+from builtins import str
 
 def write_default_configs(parser, file_position):
     '''Creates the default configuration file in file_position with default values'''
@@ -44,29 +45,35 @@ def config_handling():
         host = parser.get('login_credentials', 'host')
     return [host, user, password, database]
 
+def convertString(in_str, flag='float'):
+    if flag == 'float':
+        try:
+            ret = float(in_str)
+        except ValueError:
+            ret = -1
+        except TypeError:
+            ret = None
+    elif flag == 'int':
+        try:
+            ret = int(in_str)
+        except ValueError:
+            ret = -1
+        except TypeError:
+            ret = None    
+    
+    return ret
 
 def convertAndInsertData(day_data, source_string, stock_ticker):
     '''Converts all data into the correct format and uploads it to the MYSQL table '''
     data_string = day_data[0]
     data_split = data_string.rstrip().split(",")
     day = dt.strptime(data_split[0], "%Y-%m-%d")
-    try:
-        open_price = float(data_split[1])
-        high_price = float(data_split[2])
-        low_price = float(data_split[3])
-        close_price = float(data_split[4])
-        adj_close = float(data_split[5])
-        volume_data = int (data_split[6])
-    except ValueError:
-        for data_index in range(len(data_split[1:])):
-            if data_split[data_index + 1] == 'null':
-                data_split[data_index + 1] = -1
-        open_price = float(data_split[1])
-        high_price = float(data_split[2])
-        low_price = float(data_split[3])
-        close_price = float(data_split[4])
-        adj_close = float(data_split[5])
-        volume_data = int (data_split[6])
+    open_price = convertString(data_split[1])
+    high_price = convertString(data_split[2])
+    low_price = convertString(data_split[3])
+    close_price = convertString(data_split[4])
+    adj_close = convertString(data_split[5])
+    volume_data = convertString(data_split[6], flag='int')
     upload_data = [day, open_price, high_price, low_price, close_price, adj_close, volume_data]
     
     data_manager.insert_into_table("%s_%s_data" % (stock_ticker, source_string), col_list, [upload_data])
