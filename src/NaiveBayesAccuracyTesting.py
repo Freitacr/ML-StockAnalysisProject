@@ -8,6 +8,7 @@ from configparser import ConfigParser, NoSectionError, NoOptionError
 from StockDataAnalysisModule.MLManager import MLManager
 
 def write_default_configs(parser, file_position):
+    '''Writes the default configuration file at file_position'''
     parser.add_section('login_credentials')
     parser.set('login_credentials', 'user', 'root')
     parser.set('login_credentials', 'password', "")
@@ -18,6 +19,7 @@ def write_default_configs(parser, file_position):
     fp.close()
 
 def config_handling():
+    '''Handles reading in and error checking the configuration data'''
     file_position = "../configuration_data/config.ini"
     parser = ConfigParser()
     try:
