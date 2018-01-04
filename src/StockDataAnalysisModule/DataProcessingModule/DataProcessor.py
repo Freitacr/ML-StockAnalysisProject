@@ -14,6 +14,30 @@ class DataProcessor:
     def __init__(self, login_credentials):
         self.login_credentials = login_credentials
     
+    def __gen_training_examples(self, max_number_of_days_per_example, input_data, output_data):
+        #    
+        if not (len(input_data[0][1])) - max_number_of_days_per_example == len(output_data[0][1]):
+            raise InvalidStateError("Input size mismatch: expected %s, but got %s" % ((len(input_data[0][1])) - max_number_of_days_per_example, len(output_data[0][1])))
+        #assumed input data in format [ [ticker, in_data] ... ]
+        #assumed output data in format [ [ticker, out_data] ... ]
+        ret_dict = {}
+        for ticker_index in range(len(input_data)):
+            X, Y = [[], []]
+            in_data = input_data[ticker_index][1]
+            class_data = output_data[ticker_index][1]
+            for example_index in range(len(in_data) - max_number_of_days_per_example):
+                if not type(in_data[example_index]) == type([]):
+                    #If values in in_data are not lists
+                    X.extend(in_data[example_index:example_index + max_number_of_days_per_example])
+                else:
+                    full_list = []
+                    for sublist in in_data[example_index:example_index + max_number_of_days_per_example]:
+                        full_list.extend(sublist)
+                    X.extend([full_list])
+                Y.extend([class_data[example_index]])
+            ret_dict[input_data[ticker_index][0]] = [X, Y]
+        return ProcessedDataHolder(ret_dict)   
+    
     def getPercentageChanges(self, column_list, max_number_of_days_per_example = 5):
         data_retriever = DataRetriever(self.login_credentials, column_list)
         retrieved_data = data_retriever.getData()
@@ -57,29 +81,6 @@ class DataProcessor:
             
             return self.__gen_training_examples(max_number_of_days_per_example, input_data, target_data)
         
-    def __gen_training_examples(self, max_number_of_days_per_example, input_data, output_data):
-        #    
-        if not (len(input_data[0][1])) - max_number_of_days_per_example == len(output_data[0][1]):
-            raise InvalidStateError("Input size mismatch: expected %s, but got %s" % ((len(input_data[0][1])) - max_number_of_days_per_example, len(output_data[0][1])))
-        #assumed input data in format [ [ticker, in_data] ... ]
-        #assumed output data in format [ [ticker, out_data] ... ]
-        ret_dict = {}
-        for ticker_index in range(len(input_data)):
-            X, Y = [[], []]
-            in_data = input_data[ticker_index][1]
-            class_data = output_data[ticker_index][1]
-            for example_index in range(len(in_data) - max_number_of_days_per_example):
-                if not type(in_data[example_index]) == type([]):
-                    #If values in in_data are not lists
-                    X.extend(in_data[example_index:example_index + max_number_of_days_per_example])
-                else:
-                    full_list = []
-                    for sublist in in_data[example_index:example_index + max_number_of_days_per_example]:
-                        full_list.extend(sublist)
-                    X.extend([full_list])
-                Y.extend([class_data[example_index]])
-            ret_dict[input_data[ticker_index][0]] = [X, Y]
-        return ProcessedDataHolder(ret_dict)   
     
      
     def getMovementDirections(self, column_list, max_number_of_days_per_example = 5):
