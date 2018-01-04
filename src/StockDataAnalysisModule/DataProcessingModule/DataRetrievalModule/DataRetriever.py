@@ -7,6 +7,9 @@ Created on Dec 24, 2017
 from GeneralUtils.StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLDataManipulator
 from asyncio.futures import InvalidStateError
 
+#TODO: Allow option to use a conditional in the select_from_table method in __retrieveData
+#As this class is subject to more changes, the documentation will be flushed out more when its more complete
+
 class DataRetriever:
     
     def __init__ (self, login_credentials, column_list):
@@ -15,6 +18,7 @@ class DataRetriever:
         self.__setupStockSourceList()
         self.__retrieveData()
         self.data_man.close(commit = False)
+    
     def __setupStockSourceList(self):
         #Right now this is going to be a lot more temporary, just using whatever source has actual data on the stock
         #The sources are also going to be in order of preference of use (Yahoo, then Google right now. Even though Google has no data
@@ -31,6 +35,7 @@ class DataRetriever:
                 self.data_sources.extend([(tickers[index], 'google')])
             else:
                 raise InvalidStateError("%s has no data, but exists in the database. This is bad." % tickers[index])
+    
     def __retrieveData(self):
         self.retrieved_data = []
         for ticker, source in self.data_sources:

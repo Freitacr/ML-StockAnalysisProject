@@ -6,7 +6,6 @@ Created on Dec 20, 2017
 
 import mysql.connector as connector
 from mysql.connector.errors import Error as SQLError
-from GeneralUtils.EPrint import eprint
 
 def connect(host, user, password, database = None):
     ret = None
