@@ -89,8 +89,3 @@ class DownloaderYahoo:
             eprint("Ticker {0} errored with HTTP code {1}".format(ticker, stat[1]))
             return [False]
 
-def test():
-    cookieMan = cm.CookieManager()
-    print(cookieMan.getCookie())
-    print(cookieMan.getCrumb())
-

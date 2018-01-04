@@ -11,7 +11,6 @@ def openURL(url, cookie = None):
     '''Opens the URL specified with basic error reporting'''
     opener = ureq.build_opener()
     if not cookie == None:
-        print(cookie)
         opener.addheaders.append( ('Cookie', cookie))
     hres = None
     try:
