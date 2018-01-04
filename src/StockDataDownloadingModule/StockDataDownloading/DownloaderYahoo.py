@@ -1,7 +1,7 @@
 '''
 Created on Dec 19, 2017
 
-@author: colton 
+@author: Colton Freitas, Jim Carey
 
 TODO: Fix docstring
 

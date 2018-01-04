@@ -1,7 +1,7 @@
 '''
 Created on Dec 22, 2017
 
-@author: Colton Freitas
+@author: Colton Freitas, Jim Carey
 '''
 
 from ..StockDataDownloading.DownloaderYahoo import DownloaderYahoo
@@ -25,6 +25,9 @@ class YahooDataFormatting:
         self.yah_manager.close()
     
     def __setupYahManager(self):
+        '''
+        Creates the manipulator
+        '''
         host = self.login_credentials[0]
         user = self.login_credentials[1]
         password = self.login_credentials[2]
@@ -33,10 +36,67 @@ class YahooDataFormatting:
     
     
     def obtainCurrentRecords(self, stock_ticker):
+        '''
+        finds the data we currently own
+        '''
         column_list = ["hist_date", "adj_close"]
         return self.yah_manager.select_from_table("%s_yahoo_data" % stock_ticker.upper(), column_list, conditional = 'order by hist_date')
     
+    def generateDownloadDays(self, stored_tickers):
+        '''
+        creates a "we need these" list
+        '''
+        download_days = []
+        one_day_change = timedelta(days = 1)
+        for ticker in self.ticker_list:
+            stored = False
+            for table_entry in stored_tickers:
+                if table_entry[0].lower() == ticker.lower() and table_entry[1]:
+                    stored = True
+                    break
+            if not stored:
+                download_days.extend([[ticker.upper(), 'all']])    
+                continue
+            
+            stored_days = None
+            try:
+                stored_days = self.obtainCurrentRecords(ticker)
+            except ProgrammingError as e:
+                print(e)
+            
+            req_days = []
+            
+            if stored_days == None:
+                download_days.extend([[ticker.upper(), 'all']])
+                continue
+            else:
+                start_date = stored_days[0][0]
+                if stored_days[0][1] == -1:
+                    req_days.extend([start_date])
+            
+            for stored_day in stored_days[1:]:
+                start_date = start_date + one_day_change
+                if not stored_day[0] == start_date:
+                    req_days.extend([start_date])
+                    while not stored_day[0] == start_date:
+                        start_date = start_date + one_day_change
+                        if not stored_day[0] == start_date:
+                            req_days.extend([start_date])
+            
+            today = dt.date(dt.now())
+            
+            if not stored_days [-1][0] == today:
+                while start_date < today:
+                    start_date += one_day_change
+                    req_days.extend([start_date])
+            download_days.extend([[ticker.upper(), req_days]])
+        return download_days
+    
     def obtainData(self, down_days):
+        '''
+        tries to get the data for all tickers. returns data if the date is in the "down_days" will try three times if not obtained first.
+        returns in [[yahoo,[data[]]],[google,[data[]]]]
+        '''
         ret = []
         
         download_tickers = []
@@ -94,61 +154,4 @@ class YahooDataFormatting:
     
     def getData(self):
         return self.data
-    
-    def generateDownloadDays(self, stored_tickers):
-        download_days = []
-        one_day_change = timedelta(days = 1)
-        for ticker in self.ticker_list:
-            stored = False
-            for table_entry in stored_tickers:
-                if table_entry[0].lower() == ticker.lower() and table_entry[1]:
-                    stored = True
-                    break
-            if not stored:
-                download_days.extend([[ticker.upper(), 'all']])    
-                continue
-            
-            stored_days = None
-            try:
-                stored_days = self.obtainCurrentRecords(ticker)
-            except ProgrammingError as e:
-                print(e)
-            
-            req_days = []
-            
-            if stored_days == None:
-                download_days.extend([[ticker.upper(), 'all']])
-                continue
-            else:
-                start_date = stored_days[0][0]
-                if stored_days[0][1] == -1:
-                    req_days.extend([start_date])
-            
-            for stored_day in stored_days[1:]:
-                start_date = start_date + one_day_change
-                if not stored_day[0] == start_date:
-                    req_days.extend([start_date])
-                    while not stored_day[0] == start_date:
-                        start_date = start_date + one_day_change
-                        if not stored_day[0] == start_date:
-                            req_days.extend([start_date])
-            
-            today = dt.date(dt.now())
-            
-            if not stored_days [-1][0] == today:
-                while start_date < today:
-                    start_date += one_day_change
-                    req_days.extend([start_date])
-            download_days.extend([[ticker.upper(), req_days]])
-        return download_days
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
