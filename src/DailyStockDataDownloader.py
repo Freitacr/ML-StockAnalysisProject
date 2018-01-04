@@ -123,4 +123,5 @@ if __name__ == '__main__':
                 for day_data in ticker_data[1]:
                     convertAndInsertData(day_data, source_string, stock_ticker)
     data_manager.close(commit = True)
+    print("Fin.")
     

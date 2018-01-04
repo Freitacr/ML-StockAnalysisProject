@@ -3,8 +3,6 @@ Created on Dec 19, 2017
 
 @author: Colton Freitas, Jim Carey
 
-TODO: Fix docstring
-
 Intended Purpose: Given a list of stock tickers to download, download the historical
     data for each of the stock tickers. If the ticker is not valid, two more attempts (on a timeout)
     should be made to download data for it. In the event that the ticker still has an error,
@@ -22,7 +20,7 @@ from datetime import datetime, timedelta
 
 class DownloaderYahoo:
     def __init__(self):
-        '''Constructor'''
+        '''Initialization function'''
         self.__urlBase = 'https://query1.finance.yahoo.com/v7/finance/download/{0}?period1={1}&period2={2}&interval=1d&events=history&crumb={3}'
         try:
             self.cookie_man = cm.CookieManager()
@@ -32,8 +30,7 @@ class DownloaderYahoo:
             exit(1)
         
     def getHistoricalData(self, ticker_list, max_number_of_days = -1, start_date = None):
-        ''' 
-        
+        '''Obtains the entirety of the historical data fore each of the stocks that is possible
         @param start_date: datetime.datetime object matching the final day in the period
             stock data should be obtained for. If this is None, the current day will be used
         @param max_number_of_days: number representing the maximum amount of days BEFORE start_date
@@ -52,8 +49,12 @@ class DownloaderYahoo:
         return [data, errored]
     
     def __getDataForTicker(self, ticker, max_number_of_days, start_date):
-        ''' 
-         get request using http to get the historical data from param ticker
+        '''Obtain historical data for the ticker
+        @param ticker: Ticker to obtain data for
+        @param max_number_of_days: maximum number of days before start_date to obtain data for
+        @param start_date: The final day to obtain data for
+        Obtains the historical data for the ticker, using the cookie manager to manage the HTTP request, and
+        handling the URL construction required to fit into Yahoo!'s downloading scheme. 
         '''
         period2 = None
         period1 = None
