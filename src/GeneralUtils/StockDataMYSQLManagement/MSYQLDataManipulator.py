@@ -5,7 +5,6 @@ Created on Dec 20, 2017
 '''
 
 from .MYSQLUtils.MYSQLUtils import connect as SQLConnect
-from pandas.io import sql
 from mysql.connector.errors import InterfaceError
 
 
@@ -115,6 +114,7 @@ class MYSQLDataManipulator:
         return ret_iter
         
     def execute_sql(self, sql):
+        '''Method to execute a piece of SQL code directly, more for niche usage than normal use'''
         cursor = self.connection.cursor()
         
         cursor.execute(sql)
