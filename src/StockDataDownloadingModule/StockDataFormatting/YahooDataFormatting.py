@@ -141,6 +141,7 @@ class YahooDataFormatting:
                 #        replace_string = replace_string % (d_day, "!", "!", "!", "!", "!", "!")
                 #    ticker_ret.extend([replace_string])
                 #This is commented out since it is still up in the air about whether it should be used or not. It works, however.
+                
                 ticker_ret = [x for x in data_ticker[1] if x[0].split(",")[0] in download_days]
             elif download_days == 'all':
                 ticker_ret = data_ticker[1][1:]
