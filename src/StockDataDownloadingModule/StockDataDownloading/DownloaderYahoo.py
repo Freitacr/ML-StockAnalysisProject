@@ -53,7 +53,7 @@ class DownloaderYahoo:
     
     def __getDataForTicker(self, ticker, max_number_of_days, start_date):
         ''' 
-         
+         get request using http to get the historical data from param ticker
         '''
         period2 = None
         period1 = None
