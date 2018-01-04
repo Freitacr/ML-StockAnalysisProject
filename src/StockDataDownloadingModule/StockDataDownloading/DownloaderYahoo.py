@@ -1,7 +1,7 @@
 '''
 Created on Dec 19, 2017
 
-@author: colton 
+@author: Colton Freitas, Jim Carey
 
 TODO: Fix docstring
 
@@ -53,7 +53,7 @@ class DownloaderYahoo:
     
     def __getDataForTicker(self, ticker, max_number_of_days, start_date):
         ''' 
-         
+         get request using http to get the historical data from param ticker
         '''
         period2 = None
         period1 = None
@@ -88,9 +88,4 @@ class DownloaderYahoo:
         else:
             eprint("Ticker {0} errored with HTTP code {1}".format(ticker, stat[1]))
             return [False]
-
-def test():
-    cookieMan = cm.CookieManager()
-    print(cookieMan.getCookie())
-    print(cookieMan.getCrumb())
 

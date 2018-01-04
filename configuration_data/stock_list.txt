@@ -3,6 +3,7 @@ GOOGL
 SQNXF
 MSFT
 SNE
+<<<<<<< HEAD
 FIT
 F
 T
@@ -63,3 +64,8 @@ VZ
 XOM
 IBM
 INTC
+=======
+T
+F
+FIT
+>>>>>>> branch 'master' of https://github.com/Freitacr/ML-StockAnalysisProject
