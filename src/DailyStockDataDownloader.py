@@ -7,7 +7,6 @@ from GeneralUtils.StockDataMYSQLManagement.MSYQLDataManipulator import MYSQLData
 from datetime import datetime as dt
 from StockDataDownloadingModule.StockDataFormatting.DataFormatting import DataFormatter
 from configparser import ConfigParser, NoSectionError, NoOptionError
-from builtins import str
 
 def write_default_configs(parser, file_position):
     '''Creates the default configuration file in file_position with default values'''
