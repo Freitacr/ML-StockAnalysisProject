@@ -30,9 +30,9 @@ class DataRetriever:
         self.data_sources = []
         for index in range(len(tickers)):
             if yahoo_availability[index]:
-                self.data_sources.extend([(tickers[index], 'yahoo')])
+                self.data_sources.append((tickers[index], 'yahoo'))
             elif google_availability[index]:
-                self.data_sources.extend([(tickers[index], 'google')])
+                self.data_sources.append((tickers[index], 'google'))
             else:
                 raise InvalidStateError("%s has no data, but exists in the database. This is bad." % tickers[index])
     
