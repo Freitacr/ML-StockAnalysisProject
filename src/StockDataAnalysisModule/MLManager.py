@@ -159,7 +159,7 @@ class InfoManager:
         try:
             return section[option]
         except KeyError:
-            raise NoOptionError("No option named %s" % option)
+            raise NoOptionError(section,"No option named %s" % option)
     
     def getSectionList(self):
         return self.section_dict.keys()
