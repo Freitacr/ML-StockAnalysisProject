@@ -1,12 +1,18 @@
 # Byte-compiled / optimized / DLL files
 /**/__pycache__/
-*.pyc
 *.py[cod]
 *$py.class
 *.cmdl
 
+configuration_data/*.ini
+
 # Visual Studio Code Configuration directory
 .vscode/
+
+#PyCharm Project Files
+*.xml
+*.iml
+.idea/
 
 # C extensions
 *.so
