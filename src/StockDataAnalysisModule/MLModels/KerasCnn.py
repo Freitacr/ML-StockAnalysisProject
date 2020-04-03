@@ -23,21 +23,9 @@ def createModel(input_shape, num_out_categories = 3):
                     metrics=['accuracy'])
     return model
 
-def trainNetwork(x_train, y_train, model, num_categories=3):
-    y_data_temp = np.zeros((y_train.shape[0], num_categories))
-    for i in range(len(y_train)):
-        index = int(y_train[i][0])
-        y_data_temp[i] = np.array([0,0,0])
-        y_data_temp[i][index] = 1
-    y_train_true = y_data_temp
-    model.fit(x_train, y_train_true, None, 1, 1)
+def trainNetwork(x_train, y_train, model):
+    model.fit(x_train, y_train, None, 1, 1)
     return model
 
-def evaluateNetwork(x_test, y_test, model, num_categories = 3):
-    y_data_temp = np.zeros((y_test.shape[0], num_categories))
-    for i in range(len(y_test)):
-        index = int(y_test[i][0])
-        y_data_temp[i] = np.array([0,0,0])
-        y_data_temp[i][index] = 1
-    y_test_true = y_data_temp
-    return model.evaluate(x_test, y_test_true)
+def evaluateNetwork(x_test, y_test, model):
+    return model.evaluate(x_test, y_test)
