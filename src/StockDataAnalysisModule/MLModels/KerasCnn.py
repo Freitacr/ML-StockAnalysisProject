@@ -1,7 +1,9 @@
 import keras
 from keras.models import Sequential
 from keras.layers import Conv2D, Dropout, Flatten, Dense, MaxPooling2D, Activation
-import numpy as np
+
+from multiprocessing import cpu_count
+
 
 def createModel(input_shape, num_out_categories = 3):
     model = Sequential()
@@ -23,9 +25,12 @@ def createModel(input_shape, num_out_categories = 3):
                     metrics=['accuracy'])
     return model
 
-def trainNetwork(x_train, y_train, model):
-    model.fit(x_train, y_train, None, 1, 1)
-    return model
 
-def evaluateNetwork(x_test, y_test, model):
+def trainNetwork(x_train, y_train, model: Sequential, epochs=1, verbose=1, validation_data=None):
+    hist = model.fit(x_train, y_train, batch_size=20, epochs=epochs, verbose=verbose,
+                     validation_data=validation_data)
+    return hist
+
+
+def evaluateNetwork(x_test, y_test, model: Sequential):
     return model.evaluate(x_test, y_test)

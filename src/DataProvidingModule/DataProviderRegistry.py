@@ -5,7 +5,7 @@ class DataConsumerBase:
     def __init__(self):
         pass
 
-    def consumeData(self, data, passback):
+    def consumeData(self, data, passback, output_dir):
         raise NotImplementedError()
 
 
@@ -31,7 +31,7 @@ class DataProviderRegistry:
             self.consumers[providerDataKey] = []
         self.consumers[providerDataKey].append([consumer, dataColumns, passback])
 
-    def passData(self, login_credentials, stopForErrors=False, printErrors = True):
+    def passData(self, login_credentials, output_dir, stop_for_errors=False, print_errors=True):
         provider = None
         consumer = None
         columns = None
@@ -50,15 +50,15 @@ class DataProviderRegistry:
                         consumer = consumerSet[0]
                     else:
                         raise ValueError("Invalid number of consumer registration arguments")
-                    consumer.consumeData(provider.generateData(login_credentials, *args), passback)
+                    consumer.consumeData(provider.generateData(login_credentials, *args), passback, output_dir)
         except Exception:
-            if printErrors:
+            if print_errors:
                 traceback.print_exc()
                 print("Above error was encountered during processing of the following provider/consumer pair")
                 print('\t', type(provider), type(consumer))
                 print("With the following columns as a data argument:")
                 print('\t', columns)
-            if stopForErrors:
+            if stop_for_errors:
                 return
 
 
