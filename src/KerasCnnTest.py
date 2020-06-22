@@ -1,10 +1,8 @@
 from configparser import ConfigParser, NoSectionError, NoOptionError
-import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
 from StockDataAnalysisModule.MLModels.KerasCnn import createModel, trainNetwork, evaluateNetwork
 from StockDataAnalysisModule.DataProcessingModule.StockClusterDataManager import StockClusterDataManager
 import numpy as np
+
 
 def write_default_configs(parser, file_position):
     '''Writes the default configuration file at file_position'''
@@ -16,6 +14,7 @@ def write_default_configs(parser, file_position):
     fp = open(file_position, 'w')
     parser.write(fp)
     fp.close()
+
 
 def config_handling():
     '''Handles reading in and error checking the configuration data'''
@@ -41,6 +40,7 @@ def config_handling():
         host = parser.get('login_credentials', 'host')
     return [host, user, password, database]
 
+
 if __name__ == "__main__":
     login_credentials = config_handling()
     import sys
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     except IndexError:
         pass
     
-    dataManager = StockClusterDataManager(login_credentials, startDate, endDate, numSimilarStocks=7)
+    dataManager = StockClusterDataManager(login_credentials, startDate, endDate, num_similar_stocks=7)
     retMap = dataManager.retrieveTrainingDataMovementTargetsSplit(numDatsPerExample=30, normalized=False)
     for ticker, data in retMap.items():
         x_train, y_train, x_test, y_test = data

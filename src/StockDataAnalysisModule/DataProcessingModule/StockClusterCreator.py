@@ -1,7 +1,11 @@
 from GeneralUtils.DataStorageClasses.StockCluster import StockCluster
 from StockDataAnalysisModule.DataProcessingModule.DataRetrievalModule.RangedDataRetriever import RangedDataRetriever
 import numpy as np
-from typing import List
+from datetime import date, datetime
+
+
+def date_to_timestamp(date_in: date):
+    return datetime.fromisoformat(date_in.isoformat()).timestamp()
 
 
 def ensure_data_length_consistency(ticker_data):
@@ -74,10 +78,11 @@ class StockClusterCreator:
         if columns is None:
             column_list = ['hist_date', 'adj_close']
         else:
+            # this is intentional to allow duplicates. When a data requestor wants the historical date in
+            # their dataset, this duplicate is required as this class removes the first entry from the date
+            # it returns
             column_list = ['hist_date']
             for column in columns:
-                if column in column_list:
-                    continue
                 column_list.append(column)
         self.dataRetriever = RangedDataRetriever(login_credentials, column_list, start_date, end_date)
         self.similarTickers = similar_tickers
@@ -95,9 +100,19 @@ class StockClusterCreator:
         for toRem in to_remove_data:
             ticker_data.remove(toRem)
 
+        # remove the first element from each data entry, as it is the historical date.
+        for i in range(len(ticker_data)):
+            curr_data = ticker_data[i]
+            ticker_data[i] = [x[1:] for x in curr_data]
+
+        # determine whether to shift correlation check by one element due to included dates
+        start_index = 0
+        if type(ticker_data[0][0][0]) == date:
+            start_index = 1
+
         # have numpy calculate average correlation coefficient
         coefficients = np.zeros((len(ticker_data), len(ticker_data)))
-        for i in range(1, len(ticker_data[0][0])):
+        for i in range(start_index, len(ticker_data[0][0])):
             temp_data = [[y[i] for y in x] for x in ticker_data]
             coefficients += abs(np.corrcoef(temp_data))
         coefficients /= len(ticker_data[0][0])-1

@@ -5,6 +5,7 @@
 *.cmdl
 
 configuration_data/*.ini
+model_data/
 
 # Visual Studio Code Configuration directory
 .vscode/

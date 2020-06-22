@@ -1,6 +1,10 @@
-from configparser import ConfigParser, NoSectionError, NoOptionError
-from StockDataAnalysisModule.DataProcessingModule.StockClusterDataManager import StockClusterDataManager
-import datetime as dt
+import sys
+import os
+import importlib
+from DataProvidingModule.DataProviderRegistry import registry
+from configparser import ConfigParser, NoOptionError, NoSectionError
+
+os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
 
 
 def write_default_configs(parser, file_position):
@@ -40,18 +44,18 @@ def config_handling():
     return [host, user, password, database]
 
 
-if __name__ == '__main__':
-    exit(0)
-    login_credentials = config_handling()
+if __name__ == "__main__":
     import sys
     args = sys.argv[1:]
-    startDate = None
-    endDate = None
-    try:
-        startDate = args[0]
-        endDate = args[1]
-    except IndexError:
-        pass
-    clusterManager = StockClusterDataManager(login_credentials, startDate, endDate)
-    x_train, y_train, x_test, y_test = clusterManager.retrieveNormalizedTrainingDataMovementTargets()
-    print()
+    login_credentials = config_handling()
+    providers = os.listdir("DataProvidingModule/DataProviders")
+    for provider in providers:
+        if provider.startswith('__'):
+            continue
+        importlib.import_module('DataProvidingModule.DataProviders.' + provider.replace('.py', ''))
+    consumers = os.listdir("TrainingManagers")
+    for consumer in consumers:
+        if consumer.startswith('__'):
+            continue
+        importlib.import_module("TrainingManagers." + consumer.replace('.py',''))
+    registry.passData(login_credentials, args[0], stop_for_errors=True)

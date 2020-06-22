@@ -3,11 +3,11 @@ from StockDataAnalysisModule.DataProcessingModule.StockClusterDataManager import
 from datetime import datetime as dt, timedelta as td
 
 
-class ClusteredBlockProvider (DataProviderBase):
-    
+class SplitBlockProvider(DataProviderBase):
+
     def __init__(self):
-        super(ClusteredBlockProvider, self).__init__()
-        registry.registerProvider("ClusteredBlockProvider", self)
+        super(SplitBlockProvider, self).__init__()
+        registry.registerProvider("SplitBlockProvider", self)
 
     def generateData(self, login_credentials, *args, **kwargs):
         if len(args) <= 1:
@@ -21,10 +21,10 @@ class ClusteredBlockProvider (DataProviderBase):
         start_date = start_date.isoformat()[:10].replace('-', '/')
         end_date = dt.now().isoformat()[:10].replace('-', '/')
         data_retriever = StockClusterDataManager(login_credentials, start_date, end_date, column_list=columns)
-        return data_retriever.retrieveTrainingDataMovementTargets(expectation_columns=expectation_columns)
+        return data_retriever.retrieveTrainingDataMovementTargetsSplit(expectation_columns=expectation_columns)
 
 
 try:
     provider = provider
 except NameError:
-    provider = ClusteredBlockProvider()
+    provider = SplitBlockProvider()
