@@ -73,7 +73,7 @@ def convertAndInsertData(day_data, source_string, stock_ticker):
     close_price = convertString(data_split[4])
     adj_close = convertString(data_split[5])
     volume_data = convertString(data_split[6], flag='int')
-    upload_data = [day, open_price, high_price, low_price, close_price, adj_close, volume_data]
+    upload_data = [day, high_price, low_price, open_price, close_price, adj_close, volume_data]
     
     data_manager.insert_into_table("%s_%s_data" % (stock_ticker, source_string), col_list, [upload_data])
     

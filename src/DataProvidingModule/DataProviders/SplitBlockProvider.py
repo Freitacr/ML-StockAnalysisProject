@@ -1,13 +1,29 @@
 from DataProvidingModule.DataProviderRegistry import registry, DataProviderBase
 from StockDataAnalysisModule.DataProcessingModule.StockClusterDataManager import StockClusterDataManager
 from datetime import datetime as dt, timedelta as td
+from configparser import ConfigParser, SectionProxy
+from GeneralUtils.Config import ConfigUtil as cfgUtil
 
 
 class SplitBlockProvider(DataProviderBase):
 
+    def generatePredictionData(self, login_credentials, *args, **kwargs):
+        pass
+
     def __init__(self):
         super(SplitBlockProvider, self).__init__()
         registry.registerProvider("SplitBlockProvider", self)
+
+    def write_default_configuration(self, section: "SectionProxy"):
+        section['enabled'] = "True"
+
+    def load_configuration(self, parser: "ConfigParser"):
+        section = cfgUtil.create_type_section(parser, self)
+        if not parser.has_option(section.name, "enabled"):
+            self.write_default_configuration(section)
+        enabled = parser.getboolean(section.name, "enabled")
+        if not enabled:
+            registry.deregisterProvider("SplitBlockProvider")
 
     def generateData(self, login_credentials, *args, **kwargs):
         if len(args) <= 1:
