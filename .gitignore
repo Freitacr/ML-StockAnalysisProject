@@ -4,7 +4,7 @@
 *$py.class
 *.cmdl
 
-configuration_data/*.ini
+configuration/*.ini
 model_data/
 
 # Visual Studio Code Configuration directory
