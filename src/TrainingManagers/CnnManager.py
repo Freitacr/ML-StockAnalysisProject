@@ -1,3 +1,5 @@
+from configparser import ConfigParser, SectionProxy
+from GeneralUtils.Config import ConfigUtil as cfgUtil
 from DataProvidingModule.DataProviderRegistry import registry, DataConsumerBase
 from StockDataAnalysisModule.MLModels.KerasCnn import trainNetwork, createModel, evaluateNetwork
 from keras.layers import Conv2D, Dropout, Flatten, Dense, MaxPool2D, AveragePooling2D, Activation
@@ -173,6 +175,21 @@ def createModelsTrialByFire(data, passback, output_dir, max_layers_to_add: int =
 
 class CnnManager (DataConsumerBase):
 
+    def predictData(self, data, passback, in_model_dir):
+        pass
+
+    def load_configuration(self, parser: "ConfigParser"):
+        section = cfgUtil.create_type_section(parser, self)
+        if not parser.has_option(section.name, "enabled"):
+            self.write_default_configuration(section)
+        enabled = parser.getboolean(section.name, "enabled")
+        if not enabled:
+            registry.deregisterConsumer("ClusteredBlockProvider", self)
+            registry.deregisterConsumer("SplitBlockProvider", self)
+
+    def write_default_configuration(self, section: "SectionProxy"):
+        section['enabled'] = 'False'
+
     available_layer_choices = [(Conv2D, [(8, (2, 2)), (16, (2, 2)), (32, (2, 2)), (64, (2, 2))]),
                                (Dense, [[8], [16], [32], [64]]), (Dropout, [[.1], [.15], [.2]]),
                                (MaxPool2D, [[2, 2], [3, 3]]),
@@ -186,7 +203,7 @@ class CnnManager (DataConsumerBase):
         registry.registerConsumer("SplitBlockProvider", self,
                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
                                    [1]], passback='SplitDataCNN')
-    
+
     def consumeData(self, data, passback, output_dir):
         if not type(data) == dict:
             return
