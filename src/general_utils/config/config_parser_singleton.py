@@ -1,28 +1,64 @@
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from os.path import exists
 
+EXECUTION_OPTIONS_SECTION_NAME = 'execution_options'
+EXECUTION_OPTIONS_PREDICT_IDENTIFIER = 'predict'
+
+LOGIN_CREDENTIALS_SECTION_NAME = 'login_credentials'
+LOGIN_CREDENTIALS_USER_IDENTIFIER = 'user'
+LOGIN_CREDENTIALS_DATABASE_IDENTIFIER = 'database'
+LOGIN_CREDENTIALS_HOST_IDENTIFIER = 'host'
+
 
 def write_default_configs(file_position):
-    parser.add_section('login_credentials')
-    parser.add_section('execution_options')
-    parser.set('login_credentials', 'user', 'stock_worker')
-    parser.set('login_credentials', 'database', 'stock_testing')
-    parser.set('login_credentials', 'host', 'localhost')
-    parser.set("execution_options", "predict", "False")
+    parser.add_section(LOGIN_CREDENTIALS_SECTION_NAME)
+    parser.add_section(EXECUTION_OPTIONS_SECTION_NAME)
+    parser.set(
+        LOGIN_CREDENTIALS_SECTION_NAME,
+        LOGIN_CREDENTIALS_USER_IDENTIFIER,
+        'stock_worker'
+    )
+    parser.set(
+        LOGIN_CREDENTIALS_SECTION_NAME,
+        LOGIN_CREDENTIALS_DATABASE_IDENTIFIER,
+        'stock_testing'
+    )
+    parser.set(
+        LOGIN_CREDENTIALS_SECTION_NAME,
+        LOGIN_CREDENTIALS_HOST_IDENTIFIER,
+        'localhost'
+    )
+    parser.set(
+        EXECUTION_OPTIONS_SECTION_NAME,
+        EXECUTION_OPTIONS_PREDICT_IDENTIFIER,
+        "False"
+    )
     fp = open(file_position, 'w')
     parser.write(fp)
     fp.close()
 
 
 def read_login_credentials():
-    user = parser.get("login_credentials", 'user')
-    database = parser.get('login_credentials', 'database')
-    host = parser.get('login_credentials', 'host')
+    user = parser.get(
+        LOGIN_CREDENTIALS_SECTION_NAME,
+        LOGIN_CREDENTIALS_USER_IDENTIFIER
+    )
+    database = parser.get(
+        LOGIN_CREDENTIALS_SECTION_NAME,
+        LOGIN_CREDENTIALS_DATABASE_IDENTIFIER
+    )
+    host = parser.get(
+        LOGIN_CREDENTIALS_SECTION_NAME,
+        LOGIN_CREDENTIALS_HOST_IDENTIFIER
+    )
     return host, user, database
 
 
 def read_execution_options():
-    prediction = parser.getboolean("execution_options", "predict")
+    prediction = parser.getboolean(
+        EXECUTION_OPTIONS_SECTION_NAME,
+        EXECUTION_OPTIONS_PREDICT_IDENTIFIER
+    )
     return prediction
 
 

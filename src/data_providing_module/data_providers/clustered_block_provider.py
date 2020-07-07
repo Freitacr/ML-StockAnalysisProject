@@ -5,6 +5,9 @@ from stock_data_analysis_module.data_processing_module.stock_cluster_data_manage
 from datetime import datetime as dt, timedelta as td
 
 
+ENABLED_CONFIG_ID = "enabled"
+
+
 class ClusteredBlockProvider (DataProviderBase):
     
     def generatePredictionData(self, login_credentials, *args, **kwargs):
@@ -12,14 +15,14 @@ class ClusteredBlockProvider (DataProviderBase):
 
     def load_configuration(self, parser: "ConfigParser"):
         section = cfgUtil.create_type_section(parser, self)
-        if not parser.has_option(section.name, "enabled"):
+        if not parser.has_option(section.name, ENABLED_CONFIG_ID):
             self.write_default_configuration(section)
-        enabled = parser.getboolean(section.name, "enabled")
+        enabled = parser.getboolean(section.name, ENABLED_CONFIG_ID)
         if not enabled:
             registry.deregisterProvider("ClusteredBlockProvider")
 
     def write_default_configuration(self, section: "SectionProxy"):
-        section["enabled"] = "True"
+        section[ENABLED_CONFIG_ID] = "True"
 
     def __init__(self):
         super(ClusteredBlockProvider, self).__init__()

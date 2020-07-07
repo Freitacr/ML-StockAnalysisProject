@@ -5,6 +5,9 @@ from configparser import ConfigParser, SectionProxy
 from general_utils.config import config_util as cfgUtil
 
 
+ENABLED_CONFIG_ID = "enabled"
+
+
 class SplitBlockProvider(DataProviderBase):
 
     def generatePredictionData(self, login_credentials, *args, **kwargs):
@@ -15,13 +18,13 @@ class SplitBlockProvider(DataProviderBase):
         registry.registerProvider("SplitBlockProvider", self)
 
     def write_default_configuration(self, section: "SectionProxy"):
-        section['enabled'] = "True"
+        section[ENABLED_CONFIG_ID] = "True"
 
     def load_configuration(self, parser: "ConfigParser"):
         section = cfgUtil.create_type_section(parser, self)
-        if not parser.has_option(section.name, "enabled"):
+        if not parser.has_option(section.name, ENABLED_CONFIG_ID):
             self.write_default_configuration(section)
-        enabled = parser.getboolean(section.name, "enabled")
+        enabled = parser.getboolean(section.name, ENABLED_CONFIG_ID)
         if not enabled:
             registry.deregisterProvider("SplitBlockProvider")
 

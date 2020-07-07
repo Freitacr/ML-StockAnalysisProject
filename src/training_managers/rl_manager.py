@@ -16,6 +16,10 @@ import numpy as np
 from statistics import mean, stdev
 
 
+ENABLED_CONFIGURATION_IDENTIFIER = "enabled"
+LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER = "load_checkpoint"
+
+
 def build_network(learning_rate, n_actions, input_shape, flatten_dense_dims):
     model = Sequential()
     model.add(Conv2D(filters=32, kernel_size=1, strides=1, activation='relu',
@@ -34,6 +38,7 @@ def build_network(learning_rate, n_actions, input_shape, flatten_dense_dims):
 
 
 class RLManager (DataConsumerBase):
+
 
     def predictData(self, data, passback, in_model_dir):
         env = MultiSequentialBlockEnvironment()
@@ -64,20 +69,20 @@ class RLManager (DataConsumerBase):
 
     def load_configuration(self, parser: "ConfigParser"):
         section = cfgUtil.create_type_section(parser, self)
-        if not parser.has_option(section.name, "enabled"):
+        if not parser.has_option(section.name, ENABLED_CONFIGURATION_IDENTIFIER):
             self.write_default_configuration(section)
-        if not parser.has_option(section.name, "load_checkpoint"):
+        if not parser.has_option(section.name, LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER):
             self.write_default_configuration(section)
-        enabled = parser.getboolean(section.name, 'enabled')
-        self.load_checkpoint = parser.getboolean(section.name, 'load_checkpoint')
+        enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
+        self.load_checkpoint = parser.getboolean(section.name, LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER)
         if not enabled:
             registry.deregisterConsumer("IndicatorBlockProvider", self)
 
     def write_default_configuration(self, section: "SectionProxy"):
-        if 'enabled' not in section.keys():
-            section['enabled'] = 'False'
-        if 'load_checkpoint' not in section.keys():
-            section['load_checkpoint'] = 'True'
+        if ENABLED_CONFIGURATION_IDENTIFIER not in section.keys():
+            section[ENABLED_CONFIGURATION_IDENTIFIER] = 'False'
+        if LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER not in section.keys():
+            section[LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER] = 'True'
 
     def __init__(self):
         super(RLManager, self).__init__()

@@ -12,6 +12,9 @@ from statistics import mean
 import operator
 
 
+ENABLED_CONFIGURATION_IDENTIFIER = "enabled"
+
+
 class ScoreIndexPair:
 
     def __init__(self, score, index):
@@ -180,15 +183,15 @@ class CnnManager (DataConsumerBase):
 
     def load_configuration(self, parser: "ConfigParser"):
         section = cfgUtil.create_type_section(parser, self)
-        if not parser.has_option(section.name, "enabled"):
+        if not parser.has_option(section.name, ENABLED_CONFIGURATION_IDENTIFIER):
             self.write_default_configuration(section)
-        enabled = parser.getboolean(section.name, "enabled")
+        enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
         if not enabled:
             registry.deregisterConsumer("ClusteredBlockProvider", self)
             registry.deregisterConsumer("SplitBlockProvider", self)
 
     def write_default_configuration(self, section: "SectionProxy"):
-        section['enabled'] = 'False'
+        section[ENABLED_CONFIGURATION_IDENTIFIER] = 'False'
 
     available_layer_choices = [(Conv2D, [(8, (2, 2)), (16, (2, 2)), (32, (2, 2)), (64, (2, 2))]),
                                (Dense, [[8], [16], [32], [64]]), (Dropout, [[.1], [.15], [.2]]),
