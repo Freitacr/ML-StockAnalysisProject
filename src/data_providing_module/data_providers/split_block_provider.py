@@ -1,4 +1,5 @@
 from data_providing_module.data_provider_registry import registry, DataProviderBase
+from data_providing_module.data_providers import data_provider_static_names
 from stock_data_analysis_module.data_processing_module.stock_cluster_data_manager import StockClusterDataManager
 from datetime import datetime as dt, timedelta as td
 from configparser import ConfigParser, SectionProxy
@@ -15,7 +16,7 @@ class SplitBlockProvider(DataProviderBase):
 
     def __init__(self):
         super(SplitBlockProvider, self).__init__()
-        registry.registerProvider("SplitBlockProvider", self)
+        registry.registerProvider(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
 
     def write_default_configuration(self, section: "SectionProxy"):
         section[ENABLED_CONFIG_ID] = "True"
@@ -26,7 +27,7 @@ class SplitBlockProvider(DataProviderBase):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIG_ID)
         if not enabled:
-            registry.deregisterProvider("SplitBlockProvider")
+            registry.deregisterProvider(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID)
 
     def generateData(self, login_credentials, *args, **kwargs):
         if len(args) <= 1:

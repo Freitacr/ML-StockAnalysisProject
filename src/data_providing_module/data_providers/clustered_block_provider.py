@@ -1,6 +1,7 @@
 from configparser import ConfigParser, SectionProxy
-from general_utils.config import config_util as cfgUtil
+from general_utils.config import config_util as cfg_util
 from data_providing_module.data_provider_registry import registry, DataProviderBase
+from data_providing_module.data_providers import data_provider_static_names
 from stock_data_analysis_module.data_processing_module.stock_cluster_data_manager import StockClusterDataManager
 from datetime import datetime as dt, timedelta as td
 
@@ -14,19 +15,19 @@ class ClusteredBlockProvider (DataProviderBase):
         pass
 
     def load_configuration(self, parser: "ConfigParser"):
-        section = cfgUtil.create_type_section(parser, self)
+        section = cfg_util.create_type_section(parser, self)
         if not parser.has_option(section.name, ENABLED_CONFIG_ID):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIG_ID)
         if not enabled:
-            registry.deregisterProvider("ClusteredBlockProvider")
+            registry.deregisterProvider(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID)
 
     def write_default_configuration(self, section: "SectionProxy"):
         section[ENABLED_CONFIG_ID] = "True"
 
     def __init__(self):
         super(ClusteredBlockProvider, self).__init__()
-        registry.registerProvider("ClusteredBlockProvider", self)
+        registry.registerProvider(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self)
 
     def generateData(self, login_credentials, *args, **kwargs):
         if len(args) <= 1:

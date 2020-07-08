@@ -3,6 +3,7 @@ from abc import abstractmethod, ABC
 from configparser import ConfigParser, SectionProxy
 from typing import Dict, Tuple, List, Any
 from general_utils.config.config_parser_singleton import read_execution_options
+from general_utils.logging import logger
 
 
 class Configurable (ABC):
@@ -112,10 +113,14 @@ class DataProviderRegistry:
         except Exception:
             if print_errors:
                 traceback.print_exc()
-                print("Above error was encountered during processing of the following provider/consumer pair")
-                print('\t', type(provider), type(consumer))
-                print("With the following columns as a data argument:")
-                print('\t', columns)
+                logger.logger.log(logger.NON_FATAL_ERROR, "Above error was encountered during processing "
+                                                          "of the following provider/consumer pair")
+                logger.logger.log(
+                    logger.NON_FATAL_ERROR,
+                    "\t%s %s" % (type(provider), type(consumer))
+                )
+                logger.logger.log(logger.NON_FATAL_ERROR, "With the following columns as a data argument")
+                logger.logger.log(logger.NON_FATAL_ERROR, "\t%s" % str(columns))
             if stop_for_errors:
                 return
 

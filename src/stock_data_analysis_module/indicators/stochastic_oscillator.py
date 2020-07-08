@@ -17,8 +17,6 @@ def stochastic_oscillator(
         high = np.max(high_data[i:i+period])
         low = np.min(low_data[i:i+period])
         close = closing_data[i+period-1]
-        if close < low:
-            print("wtf")
         if high == low:
             ret_indicator[i] = np.inf
             inf_indicies.append(i)

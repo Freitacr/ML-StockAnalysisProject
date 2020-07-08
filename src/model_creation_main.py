@@ -3,6 +3,7 @@ import importlib
 from data_providing_module.data_provider_registry import registry
 from general_utils.config.config_parser_singleton import read_login_credentials, parser, \
     update_config, read_execution_options
+from general_utils.logging import logger
 
 os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
 
@@ -35,9 +36,12 @@ if __name__ == "__main__":
     if predict:
         for passback, predictions in ret_predictions.items():
             for ticker, action_states in predictions.items():
-                print("Predictions for %s" % ticker)
+                logger.logger.log(logger.INFORMATION, "Predictions for %s" % ticker)
                 for action, state in action_states:
-                    print(action, state)
+                    logger.logger.log(
+                        logger.INFORMATION,
+                        "%s %s" % (str(action), str(state))
+                    )
             # do something with the predictions
             pass
         pass

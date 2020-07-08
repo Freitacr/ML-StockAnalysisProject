@@ -1,12 +1,14 @@
 from configparser import ConfigParser, SectionProxy
 
 from data_providing_module.data_provider_registry import registry, DataProviderBase
+from data_providing_module.data_providers import data_provider_static_names
 from datetime import datetime as dt, timedelta as td
 from stock_data_analysis_module.data_processing_module.data_retrieval_module.ranged_data_retriever import RangedDataRetriever
 from stock_data_analysis_module.indicators.moving_average import SMA
 from stock_data_analysis_module.indicators.bollinger_band import bollinger_band
 from stock_data_analysis_module.indicators.stochastic_oscillator import stochastic_oscillator
 from general_utils.config import config_util as cfgUtil
+from general_utils.logging import logger
 import numpy as np
 
 
@@ -56,8 +58,12 @@ class IndicatorBlockProvider(DataProviderBase):
             volume = [(volume[i] - avg_vol) / avg_vol
                       for i in range(len(volume))]
             if len(std_high) < padded_data_block_length:
-                print("Could not process %s into an indicator block, needed %d days of trading data but received %d" %
-                      (ticker, padded_data_block_length, len(std_high)))
+                len_warning = (
+                        "Could not process %s into an indicator block, "
+                        "needed %d days of trading data but received %d" %
+                        (ticker, padded_data_block_length, len(std_high))
+                )
+                logger.logger.log(logger.WARNING, len_warning)
                 continue
             sma = SMA(std_close, kwargs['sma_period'])
             sma = sma[-data_block_length:]
@@ -91,7 +97,7 @@ class IndicatorBlockProvider(DataProviderBase):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIG_ID)
         if not enabled:
-            registry.deregisterProvider("IndicatorBlockProvider")
+            registry.deregisterProvider(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID)
 
     def generateData(self, login_credentials, *args, **kwargs):
         if len(args) < 1:
@@ -134,8 +140,12 @@ class IndicatorBlockProvider(DataProviderBase):
             volume = [(volume[i] - avg_vol) / avg_vol
                     for i in range(len(volume))]
             if len(std_high) < padded_data_block_length:
-                print("Could not process %s into an indicator block, needed %d days of trading data but received %d" %
-                      (ticker, padded_data_block_length, len(std_high)))
+                len_warning = (
+                        "Could not process %s into an indicator block, "
+                        "needed %d days of trading data but received %d" %
+                        (ticker, padded_data_block_length, len(std_high))
+                )
+                logger.logger.log(logger.WARNING, len_warning)
                 continue
             sma = SMA(std_close, kwargs['sma_period'])
             sma = sma[-data_block_length:]
@@ -162,7 +172,7 @@ class IndicatorBlockProvider(DataProviderBase):
 
     def __init__(self):
         super(IndicatorBlockProvider, self).__init__()
-        registry.registerProvider("IndicatorBlockProvider", self)
+        registry.registerProvider(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self)
         self.default_kwargs = {
             "sma_period": 50,
             "bollinger_band_stdev": 2,

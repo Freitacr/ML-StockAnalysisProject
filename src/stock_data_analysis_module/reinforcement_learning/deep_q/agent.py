@@ -44,8 +44,6 @@ class Agent:
 
     def predict_action_rewards(self, observed_state: "ndarray") -> ndarray:
         state = np.array([observed_state], copy=False, dtype=np.float32)
-        if np.array_equiv(state.shape, [1, 1]):
-            print("problem")
         return self.q_eval.predict(state)
 
     def save(self, save_dir: str, include_optimizers: bool = True,

@@ -9,7 +9,8 @@ from ..stock_data_downloading.downloader_yahoo import DownloaderYahoo
 from general_utils.mysql_management.mysql_data_manipulator import MYSQLDataManipulator
 from datetime import datetime as dt, timedelta
 from mysql.connector.errors import ProgrammingError
-from general_utils.eprint import eprint
+from general_utils.logging import logger
+
 
 class YahooDataFormatting:
     
@@ -72,22 +73,23 @@ class YahooDataFormatting:
             try:
                 stored_days = self.obtainCurrentRecords(ticker)
             except ProgrammingError as e:
-                eprint("%s errored: %s" % (ticker, str(e))) 
+                logger.logger.log(logger.NON_FATAL_ERROR, "%s errored: %s" % (ticker, str(e)))
             
             req_days = []
             
-            #Check whether the table that should house the data for the current ticker is empty or non-existant
-            #if so, then all data should be accepted
+            # Check whether the table that should house the data for the current ticker is empty or non-existant
+            # if so, then all data should be accepted
             if stored_days == None:
                 download_days.extend([[ticker.upper(), 'all']])
                 continue
             else:
                 start_date = stored_days[0][0]
-                if stored_days[0][1] == -1: #If there's a place in the adj_close column (stored_days[:][1]) that has -1,
-                                            #It needs to be updated. This just checks the first day for it.
+                # If there's a place in the adj_close column (stored_days[:][1]) that has -1,
+                # It needs to be updated. This just checks the first day for it.
+                if stored_days[0][1] == -1:
                     req_days.extend([start_date])
-            #For each day after the start_date in the stored days, check for missing days
-            #Any days that are missing, added them to the download_days list
+            # For each day after the start_date in the stored days, check for missing days
+            # Any days that are missing, added them to the download_days list
             for stored_day in stored_days[1:]:
                 start_date = start_date + one_day_change
                 if not stored_day[0] == start_date:
@@ -99,8 +101,8 @@ class YahooDataFormatting:
             
             today = dt.date(dt.now())
             
-            #Since the final stored day may not be the current date, add each day between the final stored day and
-            #today the download_days list
+            # Since the final stored day may not be the current date, add each day between the final stored day and
+            # today the download_days list
             if not stored_days [-1][0] == today:
                 while start_date < today:
                     start_date += one_day_change
@@ -118,12 +120,12 @@ class YahooDataFormatting:
         '''
         ret = []
         
-        #Extraction of the actual ticker from the down_days list structure
+        # Extraction of the actual ticker from the down_days list structure
         download_tickers = []
         for ticker in down_days:
             download_tickers.extend([ticker[0]])
         
-        #This allows for several attempts to be made at getting data for a ticker (hopefully to avoid events where internet connectivity is spotty)
+        # This allows for several attempts to be made at getting data for a ticker (hopefully to avoid events where internet connectivity is spotty)
         data = []
         temp_data, errored = self.data_downloader.getHistoricalData(download_tickers)
         data.extend(temp_data)
@@ -131,31 +133,30 @@ class YahooDataFormatting:
         data.extend(temp_data)
         temp_data, errored = self.data_downloader.getHistoricalData(errored)
         data.extend(temp_data)
-        
-        
+
         for data_ticker in data:
-            print("Now formatting data for %s" % data_ticker[0])
-            #Grab the download days for the current ticker for reference
+            logger.logger.log(logger.INFORMATION, "Now formatting data for %s" % data_ticker[0])
+            # Grab the download days for the current ticker for reference
             download_days = None
             for down_ticker in down_days:
                 if down_ticker[0] == data_ticker[0]:
                     download_days = down_ticker[1]
             
-            #Convert download days list from containing datetime objects into iso formatted strings (AKA the same string Yahoo uses for dates)
+            # Convert download days list from containing datetime objects into iso formatted strings (AKA the same string Yahoo uses for dates)
             if not download_days == 'all':
                 for index in range(len(download_days)):
                     download_days[index] = download_days[index].isoformat()
             
-                #what follows is code to make the weekends and weekdays that are missed a part of the dataset using special markings
-                #ticker_ret = []
-                #for x in data_ticker[1]:
+                # what follows is code to make the weekends and weekdays that are missed a part of the dataset using special markings
+                # ticker_ret = []
+                # for x in data_ticker[1]:
                 #    for d_day in download_days:
                 #        if x[0].split(",")[0] == d_day:
                 #            download_days.remove(d_day)
                 #            ticker_ret.extend(x)
                 #            break
-                #Do custom filling for days that are weirdly missed. 
-                #for d_day in download_days:
+                # Do custom filling for days that are weirdly missed.
+                # for d_day in download_days:
                 #    replace_string = "%s,%s,%s,%s,%s,%s,%s\n"
                 #    day = dt.strptime(d_day, "%Y-%m-%d")
                 #    if day.weekday() >= 5:
@@ -163,7 +164,7 @@ class YahooDataFormatting:
                 #    else:
                 #        replace_string = replace_string % (d_day, "!", "!", "!", "!", "!", "!")
                 #    ticker_ret.extend([replace_string])
-                #This is commented out since it is still up in the air about whether it should be used or not. It works, however.
+                # This is commented out since it is still up in the air about whether it should be used or not. It works, however.
                 
                 ticker_ret = [x for x in data_ticker[1] if x[0].split(",")[0] in download_days]
             elif download_days == 'all':
@@ -179,4 +180,3 @@ class YahooDataFormatting:
     def getData(self):
         '''Getter method for self.data'''
         return self.data
-    

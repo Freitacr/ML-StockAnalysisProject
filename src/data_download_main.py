@@ -4,6 +4,7 @@ Created on Dec 19, 2017
 @author: Colton Freitas
 '''
 from general_utils.mysql_management.mysql_data_manipulator import MYSQLDataManipulator
+from general_utils.logging import logger
 from datetime import datetime as dt
 from stock_data_downloading_module.stock_data_formatting.data_formatting import DataFormatter
 from configparser import ConfigParser, NoSectionError, NoOptionError
@@ -129,5 +130,4 @@ if __name__ == '__main__':
                 for day_data in ticker_data[1]:
                     convertAndInsertData(day_data, source_string, stock_ticker)
     data_manager.close(commit = True)
-    print("Fin.")
-    
+    logger.logger.log(logger.INFORMATION, "Finished obtaining data from data sources")

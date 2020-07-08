@@ -14,7 +14,7 @@ Intended Purpose: Given a list of stock tickers to download, download the histor
 
 from .yahoo_downloading_utils import cookie_manager as cm
 from .http_utils.http_utils import openURL
-from general_utils.eprint import eprint
+from general_utils.logging import logger
 from datetime import datetime, timedelta
 
 
@@ -25,8 +25,8 @@ class DownloaderYahoo:
         try:
             self.cookie_man = cm.CookieManager()
         except ValueError as e:
-            eprint("Error occurred while obtaining cookie: {0}".format(str(e)))
-            eprint("Exiting as continuation is impossible...")
+            logger.logger.log(logger.FATAL_ERROR, "Error occurred while obtaining cookie: {0}".format(str(e)))
+            logger.logger.log(logger.FATAL_ERROR, "Exiting as continuation is impossible")
             exit(1)
         
     def getHistoricalData(self, ticker_list, max_number_of_days = -1, start_date = None):
@@ -59,34 +59,33 @@ class DownloaderYahoo:
         period2 = None
         period1 = None
         
-        #Convert the value of start_date into the number of seconds since the Epoch (Jan 1, 1970 at midnight)
+        # Convert the value of start_date into the number of seconds since the Epoch (Jan 1, 1970 at midnight)
         if start_date == None:
             start_date = datetime.now()
             period2 = round(start_date.timestamp())
         else:
             period2 = round(start_date.timestamp())
         
-        #Use start_date and max_number_of_days to calculate the lower bound of the data retrieval period
-        #(in the number of seconds since the Epoch)
+        # Use start_date and max_number_of_days to calculate the lower bound of the data retrieval period
+        # (in the number of seconds since the Epoch)
         if max_number_of_days == -1:
             period1 = 0
         else:
             period1 = round((start_date - timedelta(days = max_number_of_days)).timestamp())
-        
-        
-        #Setup full download URL from the base
-        downloadURL = self.__urlBase.format(ticker.upper(), period1, period2, self.cookie_man.getCrumb()[1:])
-        print(downloadURL)
-        stat = openURL(downloadURL, cookie=self.cookie_man.getCookie())
+
+        # Setup full download URL from the base
+        download_url = self.__urlBase.format(ticker.upper(), period1, period2, self.cookie_man.getCrumb()[1:])
+        logger.logger.log(logger.INFORMATION, download_url)
+        stat = openURL(download_url, cookie=self.cookie_man.getCookie())
         
         data = []
-        #stat[0] is a flag for whether the connection went through
+        # stat[0] is a flag for whether the connection went through
         if stat[0]:
             reply = stat[1]
             for line in reply:
                 data.append([line.decode()])
             return [True, data]
         else:
-            eprint("Ticker {0} errored with HTTP code {1}".format(ticker, stat[1]))
+            logger.logger.log(logger.WARNING, "Ticker {0} errored with HTTP code {1}".format(ticker, stat[1]))
             return [False]
 

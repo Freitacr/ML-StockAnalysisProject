@@ -1,7 +1,8 @@
 from configparser import ConfigParser, SectionProxy
 from general_utils.config import config_util as cfgUtil
 from data_providing_module.data_provider_registry import registry, DataConsumerBase
-from stock_data_analysis_module.ml_models.keras_cnn import trainNetwork, createModel, evaluateNetwork
+from data_providing_module.data_providers import data_provider_static_names
+from stock_data_analysis_module.ml_models.keras_cnn import trainNetwork
 from keras.layers import Conv2D, Dropout, Flatten, Dense, MaxPool2D, AveragePooling2D, Activation
 from keras.models import Sequential
 from keras.callbacks import History
@@ -187,8 +188,8 @@ class CnnManager (DataConsumerBase):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
         if not enabled:
-            registry.deregisterConsumer("ClusteredBlockProvider", self)
-            registry.deregisterConsumer("SplitBlockProvider", self)
+            registry.deregisterConsumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self)
+            registry.deregisterConsumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
 
     def write_default_configuration(self, section: "SectionProxy"):
         section[ENABLED_CONFIGURATION_IDENTIFIER] = 'False'
@@ -200,10 +201,10 @@ class CnnManager (DataConsumerBase):
 
     def __init__(self):
         super(CnnManager, self).__init__()
-        registry.registerConsumer("ClusteredBlockProvider", self,
+        registry.registerConsumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self,
                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
                                    [1]], passback='CombinedDataCNN')
-        registry.registerConsumer("SplitBlockProvider", self,
+        registry.registerConsumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self,
                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
                                    [1]], passback='SplitDataCNN')
 
@@ -214,28 +215,6 @@ class CnnManager (DataConsumerBase):
         else:
             for ticker, model_data in data.items():
                 createModelsTrialByFire(model_data, passback + '_' + ticker, output_dir)
-        # x_train, y_train, x_test, y_test = data
-        # data_shape = x_train[0].shape
-        # cats = len(y_train[0])
-        # models = createModels(data_shape, num_categories=cats, start_layer_range=6)
-        # for model in models:
-        #     previous_best_eval_accuracy = 0
-        #     best_epoch = -1
-        #     if passback is None:
-        #         passback = ''
-        #     model_identifier = passback + "-".join([str(x) for x in model.layers])
-        #     with open(output_dir + os.sep + model_identifier + '.mlinf', 'w') as fileHandle:
-        #         hist = trainNetwork(x_train.astype("float"), y_train.astype("float"),
-        #                             model.model, epochs=1,
-        #                             validation_data=(x_test.astype("float"), y_test))
-        #         print(type(hist))
-        # model_accuracy = evaluateNetwork(x_test, y_test, model[0])
-        # print(model_identifier, model_accuracy, file=fileHandle, flush=True)
-        # if model_accuracy[1] > previous_best_eval_accuracy:
-        # pass
-        # print("Saving:", model_identifier)
-        # previous_best_eval_accuracy = model_accuracy[1]
-        # model[0].save(output_dir + os.sep + model_identifier + '.cmdl')
 
 
 try:

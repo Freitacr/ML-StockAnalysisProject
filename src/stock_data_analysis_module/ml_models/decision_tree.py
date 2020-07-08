@@ -100,7 +100,6 @@ class Node:
 	def __calcEntropy(self, dataLen):
 		entropy = 0
 		for path in range(self.getNumPaths()):
-			#print((len(self.getDataForPath(path)) / dataLen) * self.__calcEntropyAtPath(path))
 			entropy += (len(self.getDataForPath(path)) / dataLen) * self.__calcEntropyAtPath(path)
 		return entropy
 		
