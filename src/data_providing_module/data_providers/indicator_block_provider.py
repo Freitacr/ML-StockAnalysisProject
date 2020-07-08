@@ -181,7 +181,4 @@ class IndicatorBlockProvider(DataProviderBase):
         }
 
 
-try:
-    provider = provider
-except NameError:
-    provider = IndicatorBlockProvider()
+provider = IndicatorBlockProvider()

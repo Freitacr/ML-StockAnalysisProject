@@ -217,7 +217,4 @@ class CnnManager (DataConsumerBase):
                 createModelsTrialByFire(model_data, passback + '_' + ticker, output_dir)
 
 
-try:
-    consumer = consumer
-except NameError:
-    consumer = CnnManager()
+consumer = CnnManager()

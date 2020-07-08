@@ -44,7 +44,4 @@ class SplitBlockProvider(DataProviderBase):
         return data_retriever.retrieveTrainingDataMovementTargetsSplit(expectation_columns=expectation_columns)
 
 
-try:
-    provider = provider
-except NameError:
-    provider = SplitBlockProvider()
+provider = SplitBlockProvider()

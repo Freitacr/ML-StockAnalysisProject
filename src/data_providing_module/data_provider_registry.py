@@ -125,9 +125,4 @@ class DataProviderRegistry:
                 return
 
 
-global registry
-    
-try:
-    registry = registry
-except NameError:
-    registry = DataProviderRegistry()
+registry = DataProviderRegistry()

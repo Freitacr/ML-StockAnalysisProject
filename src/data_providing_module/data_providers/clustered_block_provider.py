@@ -44,7 +44,4 @@ class ClusteredBlockProvider (DataProviderBase):
         return data_retriever.retrieveTrainingDataMovementTargets(expectation_columns=expectation_columns)
 
 
-try:
-    provider = provider
-except NameError:
-    provider = ClusteredBlockProvider()
+provider = ClusteredBlockProvider()

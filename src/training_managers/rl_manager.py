@@ -157,7 +157,4 @@ def generate_actions(agent: "Agent", observations: List["np.ndarray"]):
     return ret_actions
 
 
-try:
-    provider = provider
-except NameError:
-    provider = RLManager()
+provider = RLManager()
