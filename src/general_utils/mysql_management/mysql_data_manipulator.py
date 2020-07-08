@@ -5,9 +5,8 @@ Created on Dec 20, 2017
 '''
 
 from .mysql_utils.mysql_utils import connect as SQLConnect
+from general_utils.mysql_management.mysql_utils import mysql_utils
 from mysql.connector.errors import InterfaceError
-
-
 
 
 class MYSQLDataManipulator:
@@ -92,6 +91,20 @@ class MYSQLDataManipulator:
         
         self.__close_cursor(cursor)
 
+    def drop_table(self, table_name):
+        sql = 'drop table %s' % table_name
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        self.__close_cursor(cursor)
+
+    def show_tables_like(self, table_name):
+        sql = 'show tables like "%s"' % mysql_utils.escape_table_name(table_name)
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        ret_iter = cursor.fetchall()
+        self.__close_cursor(cursor)
+        return ret_iter
+
     def __switch_database(self, database, cursor):
         cursor.execute("USE %s" % database)
         
@@ -112,7 +125,15 @@ class MYSQLDataManipulator:
         ret_iter = cursor.fetchall()
         self.__close_cursor(cursor)
         return ret_iter
-        
+
+    def explain(self, table_name):
+        sql = "explain %s" % table_name
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        ret_iter = cursor.fetchall()
+        self.__close_cursor(cursor)
+        return ret_iter
+
     def execute_sql(self, sql):
         '''Method to execute a piece of SQL code directly, more for niche usage than normal use'''
         cursor = self.connection.cursor()
