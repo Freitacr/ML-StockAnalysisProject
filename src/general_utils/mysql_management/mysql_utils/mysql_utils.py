@@ -22,16 +22,12 @@ def escape_table_name(table_name: str):
     return ret_name
 
 
-def connect(host, user, password, database = None):
-    ret = None
-    try:
-        if database == None:
-            ret = connector.connect(host = host, user = user, password = password)
-        else:
-            ret = connector.connect(host = host, user = user, password = password, database = database)
-    except SQLError as e:
-        ret = [False, e]
-    return [True,ret]
+def connect(host: str, user: str, password: str, database: str = None):
+    if database is None:
+        ret = connector.connect(host=host, user=user, password=password)
+    else:
+        ret = connector.connect(host=host, user=user, password=password, database=database)
+    return ret
 
 
 class SqlTableColumn:

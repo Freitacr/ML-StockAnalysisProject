@@ -39,3 +39,12 @@ def construct_insert_into_table_func(table_name: str, column_names: List[str]):
             cols = column_list
         data_man.insert_into_table(table_name, cols, data, database)
     return insert_into_table
+
+
+def construct_update_func(table_name: str):
+    def update(
+            data_man: mysql_data_manipulator.MYSQLDataManipulator,
+            update_sql: str,
+            conditional: str):
+        data_man.update(table_name, update_sql, conditional)
+    return update

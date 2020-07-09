@@ -10,22 +10,10 @@ from mysql.connector.errors import InterfaceError
 
 
 class MYSQLDataManipulator:
-    '''
-    
-    #TODO: Change error handling in class to be more customized and informative
-    '''
-
 
     def __init__(self, host, user, password, database=None):
-        '''Constructor 
-        
-        
-        
-        '''
-        connectionStatus = SQLConnect(host, user, password, database)
-        if not connectionStatus[0]:
-            raise ConnectionError(connectionStatus[1]) 
-        self.connection = connectionStatus[1]
+
+        self.connection = SQLConnect(host, user, password, database)
         
     def insert_into_table(self, table, column_names, data, database = None):
         ''' Uploads the information in data into the table specified
@@ -125,6 +113,12 @@ class MYSQLDataManipulator:
         ret_iter = cursor.fetchall()
         self.__close_cursor(cursor)
         return ret_iter
+
+    def update(self, table_name: str, update: str, conditional: str):
+        update_sql = f"update {table_name} set {update} where {conditional}"
+        cursor = self.connection.cursor()
+        cursor.execute(update_sql)
+        self.__close_cursor(cursor)
 
     def explain(self, table_name):
         sql = "explain %s" % table_name

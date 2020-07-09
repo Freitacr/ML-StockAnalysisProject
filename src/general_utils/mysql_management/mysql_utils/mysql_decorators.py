@@ -85,6 +85,7 @@ def _bind_sql_functions(obj, table_name, column_defs: List[SqlTableColumn]):
         table_name,
         [col.name for col in column_defs]
     )
+    obj.update = mysql_manipulator_function_factories.construct_update_func(table_name)
 
 
 def mysql_table(fixed_table_name: Optional[str] = None):

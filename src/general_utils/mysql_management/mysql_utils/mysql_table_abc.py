@@ -32,4 +32,10 @@ class MySQLTable(abc.ABC):
                           ):
         pass
 
+    @abc.abstractmethod
+    def update(self,
+               data_manager: mysql_data_manipulator.MYSQLDataManipulator,
+               update: str,
+               conditional: str):
+        pass
 
