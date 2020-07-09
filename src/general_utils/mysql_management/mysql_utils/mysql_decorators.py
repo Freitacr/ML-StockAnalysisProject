@@ -93,16 +93,13 @@ def mysql_table(fixed_table_name: Optional[str] = None):
         """Designates an __init__ function that should be used to verify the existence and columns of a MySQL Table
 
         Args:
-            init_function: class __init__ function. The first argument of this function must be a valid MySQLDataManipulator
+            init_function: class __init__ function.
             fixed_table_name: name of the SQL table the decorator should search for.
                 If this is None, then the initializer must set self.db_tablename to the name of the table.
-        See Also:
-            MySQLDataManipulator
-
         """
         @functools.wraps(init_function)
         def table_linking(obj: mysql_table_abc.MySQLTable, *args, **kwargs):
-            data_manipulator = args[0]  # type: MYSQLDataManipulator
+            data_manipulator = mysql_manipulator_function_factories.AUTO_CLOSING_DATA_MANAGER
             # use instance variables of type SqlColumn to create table or verify table existence.
             table_columns = {}
             init_function(obj, *args, **kwargs)

@@ -6,7 +6,8 @@ Created on Dec 22, 2017
 
 
 from ..stock_data_downloading.downloader_yahoo import DownloaderYahoo
-from general_utils.mysql_management.mysql_data_manipulator import MYSQLDataManipulator
+from general_utils.mysql_management.mysql_tables import stock_list_table
+from general_utils.mysql_management.mysql_tables import stock_data_table
 from datetime import datetime as dt, timedelta
 from mysql.connector.errors import ProgrammingError
 from general_utils.logging import logger
@@ -14,39 +15,29 @@ from general_utils.logging import logger
 
 class YahooDataFormatting:
     
-    def __init__(self, ticker_list, login_credentials):
+    def __init__(self, ticker_list):
         '''Initialization method
         @param ticker_list: List of stock tickers to obtain and format data for
         @param login_credentials: Login credentials for the MySQL Server 
         '''
-        self.login_credentials = login_credentials
         self.ticker_list = ticker_list
-        self.__setupYahManager()
         self.data_downloader = DownloaderYahoo()
-        
-        #for each ticker stored in stock_list, grab the ticker and the boolean of whether yahoo data has been downloaded for it
-        stored_tickers = self.yah_manager.select_from_table('stock_list', ['ticker', 'yahoo'])
+        self.stock_list_table = stock_list_table.StockListTable()
+        # for each ticker stored in stock_list, grab the ticker and whether yahoo data has been downloaded for it
+        stored_tickers = self.stock_list_table.select_from_table(
+            [stock_list_table.TICKER_COLUMN_NAME, stock_list_table.YAHOO_COLUMN_NAME]
+        )
         down_days = self.generateDownloadDays(stored_tickers)
         
         self.data = self.obtainData(down_days)
-        
-        self.yah_manager.close()
-    
-    def __setupYahManager(self):
-        '''Sets up the MYSQL manipulator for ease of querying the server'''
-        host = self.login_credentials[0]
-        user = self.login_credentials[1]
-        password = self.login_credentials[2]
-        database = self.login_credentials[3]
-        self.yah_manager = MYSQLDataManipulator(host, user, password, database)
-    
-    
+
     def obtainCurrentRecords(self, stock_ticker):
         '''Obtains historical data on the supplied ticker from the MYSQL Database
         @param stock_ticker: The ticker to obtain the data for
         '''
         column_list = ["hist_date", "adj_close"]
-        return self.yah_manager.select_from_table("%s_yahoo_data" % stock_ticker.upper(), column_list, conditional = 'order by hist_date')
+        data_table = stock_data_table.StockDataTable(f"{stock_ticker.upper}_yahoo_data")
+        return data_table.select_from_table(column_list, conditional="order by hist_date")
     
     def generateDownloadDays(self, stored_tickers):
         '''Generates a list of days that data should be collected for
@@ -124,8 +115,7 @@ class YahooDataFormatting:
         download_tickers = []
         for ticker in down_days:
             download_tickers.extend([ticker[0]])
-        
-        # This allows for several attempts to be made at getting data for a ticker (hopefully to avoid events where internet connectivity is spotty)
+
         data = []
         temp_data, errored = self.data_downloader.getHistoricalData(download_tickers)
         data.extend(temp_data)
@@ -141,30 +131,10 @@ class YahooDataFormatting:
             for down_ticker in down_days:
                 if down_ticker[0] == data_ticker[0]:
                     download_days = down_ticker[1]
-            
-            # Convert download days list from containing datetime objects into iso formatted strings (AKA the same string Yahoo uses for dates)
+
             if not download_days == 'all':
                 for index in range(len(download_days)):
                     download_days[index] = download_days[index].isoformat()
-            
-                # what follows is code to make the weekends and weekdays that are missed a part of the dataset using special markings
-                # ticker_ret = []
-                # for x in data_ticker[1]:
-                #    for d_day in download_days:
-                #        if x[0].split(",")[0] == d_day:
-                #            download_days.remove(d_day)
-                #            ticker_ret.extend(x)
-                #            break
-                # Do custom filling for days that are weirdly missed.
-                # for d_day in download_days:
-                #    replace_string = "%s,%s,%s,%s,%s,%s,%s\n"
-                #    day = dt.strptime(d_day, "%Y-%m-%d")
-                #    if day.weekday() >= 5:
-                #        replace_string = replace_string % (d_day, "-", "-", "-", "-", "-", "-")
-                #    else:
-                #        replace_string = replace_string % (d_day, "!", "!", "!", "!", "!", "!")
-                #    ticker_ret.extend([replace_string])
-                # This is commented out since it is still up in the air about whether it should be used or not. It works, however.
                 
                 ticker_ret = [x for x in data_ticker[1] if x[0].split(",")[0] in download_days]
             elif download_days == 'all':

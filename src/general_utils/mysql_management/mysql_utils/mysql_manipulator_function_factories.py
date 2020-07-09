@@ -1,11 +1,17 @@
 from typing import List, Optional, Iterable, Any
 
 from general_utils.mysql_management import mysql_data_manipulator
+from general_utils.config import config_parser_singleton
+import atexit
+
+_host, _user, _database = config_parser_singleton.read_login_credentials()
+AUTO_CLOSING_DATA_MANAGER = mysql_data_manipulator.MYSQLDataManipulator(_host, _user, "", _database)
+atexit.register(AUTO_CLOSING_DATA_MANAGER.close)
 
 
 def construct_drop_table_func(table_name: str):
-    def drop_table_func(data_man: mysql_data_manipulator.MYSQLDataManipulator):
-        data_man.drop_table(table_name)
+    def drop_table_func():
+        AUTO_CLOSING_DATA_MANAGER.drop_table(table_name)
     return drop_table_func
 
 
@@ -18,18 +24,16 @@ def _check_column_existence(table_name: str, column_list: List[str], column_name
 
 def construct_select_from_table_func(table_name: str, column_names: List[str]):
     def select_from_table(
-            data_man: mysql_data_manipulator.MYSQLDataManipulator,
             column_list: List[str],
             database: Optional[str] = None,
             conditional: Optional[str] = None):
         _check_column_existence(table_name, column_list, column_names)
-        return data_man.select_from_table(table_name, column_list, database, conditional)
+        return AUTO_CLOSING_DATA_MANAGER.select_from_table(table_name, column_list, database, conditional)
     return select_from_table
 
 
 def construct_insert_into_table_func(table_name: str, column_names: List[str]):
     def insert_into_table(
-            data_man: mysql_data_manipulator.MYSQLDataManipulator,
             data: List[Iterable[Any]],
             column_list: Optional[List[str]] = None,
             database: Optional[str] = None):
@@ -37,14 +41,13 @@ def construct_insert_into_table_func(table_name: str, column_names: List[str]):
         if column_list is not None:
             _check_column_existence(table_name, column_list, column_names)
             cols = column_list
-        data_man.insert_into_table(table_name, cols, data, database)
+        AUTO_CLOSING_DATA_MANAGER.insert_into_table(table_name, cols, data, database)
     return insert_into_table
 
 
 def construct_update_func(table_name: str):
     def update(
-            data_man: mysql_data_manipulator.MYSQLDataManipulator,
             update_sql: str,
             conditional: str):
-        data_man.update(table_name, update_sql, conditional)
+        AUTO_CLOSING_DATA_MANAGER.update(table_name, update_sql, conditional)
     return update
