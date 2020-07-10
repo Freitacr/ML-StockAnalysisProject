@@ -6,21 +6,27 @@ Created on Dec 23, 2017
 
 
 import abc
-from typing import List, Set
+from typing import List, Set, Iterable, Any, Tuple
+
+
+class TickerFormattedData(object):
+
+    def __init__(self, downloaded_ticker: str, downloaded_data: List[Iterable[Any]]):
+        self.ticker = downloaded_ticker
+        self.data = downloaded_data
 
 
 class DataFormatterRegistry:
-    
+
     def __init__(self):
         '''Initialization method
         @param ticker_list: List of stock tickers to obtain and format data for
-        @param login_credentials: Login credentials for the MySQL Server 
+        @param login_credentials: Login credentials for the MySQL Server
         '''
         self.formatter_registry: Set[DataFormatter] = set()
-        
-    def getData(self, ticker_list):
+
+    def get_data(self, ticker_list) -> List[Tuple[str, Iterable[TickerFormattedData]]]:
         '''Obtain and format data on all tickers from self.ticker_list
-        @return List formatted as such [ [datasource1, [ [ticker, [day1data, day2data...] ], [ticker2 ....] ] ], [datasourceN ... ] ]
         '''
         ret_data = []
         for formatter in self.formatter_registry:
@@ -31,7 +37,7 @@ class DataFormatterRegistry:
 class DataFormatter(abc.ABC):
 
     @abc.abstractmethod
-    def get_data(self, ticker_list: List[str]):
+    def get_data(self, ticker_list: List[str]) -> Tuple[str, Iterable[TickerFormattedData]]:
         pass
 
 

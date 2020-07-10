@@ -42,7 +42,7 @@ class DownloaderYahoo:
         for ticker in ticker_list:
             ret = self.__getDataForTicker(ticker, max_number_of_days, start_date)
             if ret[0]:
-                data.extend([[ticker, ret[1]]])
+                data.append([ticker, ret[1]])
             else:
                 errored.extend([ticker])
         
@@ -83,7 +83,7 @@ class DownloaderYahoo:
         if stat[0]:
             reply = stat[1]
             for line in reply:
-                data.append([line.decode()])
+                data.append(line.decode())
             return [True, data]
         else:
             logger.logger.log(logger.WARNING, "Ticker {0} errored with HTTP code {1}".format(ticker, stat[1]))

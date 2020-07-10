@@ -33,8 +33,7 @@ def convertString(in_str: str, flag: str = 'float'):
 
 def convert_upload_data(day_data):
     '''Converts all data into the correct format and uploads it to the MYSQL table '''
-    data_string = day_data[0]
-    data_split = data_string.rstrip().split(",")
+    data_split = day_data.rstrip().split(",")
     day = dt.strptime(data_split[0], "%Y-%m-%d")
     open_price = convertString(data_split[1])
     high_price = convertString(data_split[2])
@@ -68,26 +67,22 @@ if __name__ == '__main__':
         importlib.import_module('stock_data_downloading_module.stock_data_formatters.' + provider.replace('.py', ''))
 
     data_formatter = data_formatting.registry
-    data = data_formatter.getData(stock_list)
-
-    # data[0][1] is the actual data storage. It contains a list for each of the tickers data is returned for
-    # data[0][1][0] is the index of the first ticker's data list. index 0 is the ticker, 1 is the actual data list
-    # data[0][1][0][1] is the data list, it contains lists (each of size 1...) containing each of the days of data
+    data = data_formatter.get_data(stock_list)
 
     for data_source in data:
-        # TODO extract data source into its own class when it is created after all table interactions are abstracted.
-        source_string = data_source[0]
-        for ticker_data in data_source[1]:
-            stock_ticker = (ticker_data[0])
+        source_string, source_data = data_source
+        for ticker_formatted_data in source_data:
+            stock_ticker = ticker_formatted_data.ticker
+            stock_data = ticker_formatted_data.data
             stock_status = stock_list_db_table.select_from_table(
                 [source_string],
-                conditional="where ticker = '%s'" % stock_ticker
+                conditional=f"where ticker = '{stock_ticker}'"
             )
-            ticker_data_table = stock_data_table.StockDataTable("%s_%s_data" % (stock_ticker, source_string))
-            for i in range(len(ticker_data[1])):
-                ticker_data[1][i] = convert_upload_data(ticker_data[1][i])
+            ticker_data_table = stock_data_table.StockDataTable(f"{stock_ticker}_{source_string}_data")
+            for i in range(len(stock_data)):
+                stock_data[i] = convert_upload_data(stock_data[i])
             ticker_data_table.insert_into_table(
-                ticker_data[1],
+                stock_data,
                 [
                     stock_data_table.HISTORICAL_DATE_COLUMN_NAME,
                     stock_data_table.HIGH_PRICE_COLUMN_NAME,
@@ -97,15 +92,15 @@ if __name__ == '__main__':
                     stock_data_table.ADJUSTED_CLOSING_PRICE_COLUMN_NAME,
                     stock_data_table.VOLUME_COLUMN_NAME
                 ])
-            if len(stock_status) == 0 or not stock_status[0][0]:
-                if not len(stock_status) == 0:
-                    # meaning that the source was not listed as being available
-                    ticker_data_table.update(f"set {source_string}=1", f"where ticker='{stock_ticker}'")
-                else:
-                    stock_list_db_table.insert_into_table(
-                        [(stock_ticker, True)],
-                        [
-                            stock_list_table.TICKER_COLUMN_NAME,
-                            source_string
-                        ])
+            if len(stock_status) == 0:
+                stock_list_db_table.insert_into_table(
+                    [(stock_ticker, True)],
+                    [
+                        stock_list_table.TICKER_COLUMN_NAME,
+                        source_string
+                    ])
+            elif not stock_status[0][0]:
+                # meaning that the source was not listed as being available for the current stock
+                ticker_data_table.update(f"set {source_string}=1", f"where ticker='{stock_ticker}'")
+
     logger.logger.log(logger.INFORMATION, "Finished obtaining data from data sources")
