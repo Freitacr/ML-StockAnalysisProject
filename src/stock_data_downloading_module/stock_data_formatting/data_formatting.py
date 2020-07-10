@@ -5,22 +5,34 @@ Created on Dec 23, 2017
 '''
 
 
-from .yahoo_data_formatting import YahooDataFormatting
+import abc
+from typing import List, Set
 
-class DataFormatter:
+
+class DataFormatterRegistry:
     
-    def __init__(self, ticker_list):
+    def __init__(self):
         '''Initialization method
         @param ticker_list: List of stock tickers to obtain and format data for
         @param login_credentials: Login credentials for the MySQL Server 
         '''
-        self.ticker_list = ticker_list
+        self.formatter_registry: Set[DataFormatter] = set()
         
-    def getData(self):
+    def getData(self, ticker_list):
         '''Obtain and format data on all tickers from self.ticker_list
         @return List formatted as such [ [datasource1, [ [ticker, [day1data, day2data...] ], [ticker2 ....] ] ], [datasourceN ... ] ]
         '''
         ret_data = []
-        yah_formatter = YahooDataFormatting(self.ticker_list)
-        ret_data.extend([yah_formatter.getData()])
+        for formatter in self.formatter_registry:
+            ret_data.append(formatter.get_data(ticker_list))
         return ret_data
+
+
+class DataFormatter(abc.ABC):
+
+    @abc.abstractmethod
+    def get_data(self, ticker_list: List[str]):
+        pass
+
+
+registry = DataFormatterRegistry()

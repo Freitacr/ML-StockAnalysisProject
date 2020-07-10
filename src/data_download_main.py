@@ -4,10 +4,12 @@ Created on Dec 19, 2017
 @author: Colton Freitas
 '''
 from datetime import datetime as dt
+import os
+import importlib
 
 from general_utils.mysql_management.mysql_tables import stock_data_table, stock_list_table
 from general_utils.logging import logger
-from stock_data_downloading_module.stock_data_formatting.data_formatting import DataFormatter
+from stock_data_downloading_module.stock_data_formatting import data_formatting
 
 
 def convertString(in_str: str, flag: str = 'float'):
@@ -59,8 +61,14 @@ if __name__ == '__main__':
 
     stock_list_db_table = stock_list_table.StockListTable()
 
-    data_formatter = DataFormatter(stock_list)
-    data = data_formatter.getData()
+    providers = os.listdir("stock_data_downloading_module/stock_data_formatters")
+    for provider in providers:
+        if provider.startswith('__'):
+            continue
+        importlib.import_module('stock_data_downloading_module.stock_data_formatters.' + provider.replace('.py', ''))
+
+    data_formatter = data_formatting.registry
+    data = data_formatter.getData(stock_list)
 
     # data[0][1] is the actual data storage. It contains a list for each of the tickers data is returned for
     # data[0][1][0] is the index of the first ticker's data list. index 0 is the ticker, 1 is the actual data list
