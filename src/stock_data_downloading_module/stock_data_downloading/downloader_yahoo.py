@@ -44,7 +44,7 @@ class DownloaderYahoo:
             if ret[0]:
                 data.append([ticker, ret[1]])
             else:
-                errored.extend([ticker])
+                errored.append(ticker)
         
         return [data, errored]
     

@@ -9,7 +9,7 @@ class KNN:
 	def train(self, X, Y):
 		self.setup_label_mapping(X)
 		for example_index in range(len(X)):
-			self.data_points.extend([[self.transform_example(X[example_index]), Y[example_index]]])	
+			self.data_points.append([self.transform_example(X[example_index]), Y[example_index]])
 	def store(self, filename):
 		file = None
 		try:
@@ -51,14 +51,14 @@ class KNN:
 				xlist = lineSplit[0].split(" ")
 				for xindex in range(len(xlist)):
 					xlist[xindex] = int(xlist[xindex])
-				self.data_points.extend([[xlist, [lineSplit[1].rstrip()]]])
+				self.data_points.append([xlist, [lineSplit[1].rstrip()]])
 			else:
 				if line == "None\n":
-					self.label_mapping_dicts.extend([None])
+					self.label_mapping_dicts.append(None)
 					dict_index += 1
 					continue
 				lineSplit = line.split("|")
-				self.label_mapping_dicts.extend([{}])
+				self.label_mapping_dicts.append({})
 				for ex in lineSplit:
 					exSplit = ex.split("=")
 					self.label_mapping_dicts[dict_index][exSplit[0]] = int(exSplit[1])
@@ -80,7 +80,7 @@ class KNN:
 				distance = self.custom_distance(function, transformed_x, point[0])
 			else:
 				distance = self.manhattan_distance(transformed_x, point[0])
-			point_storage.extend([[point, distance]])
+			point_storage.append([point, distance])
 		point_storage = sorted(point_storage, key=operator.itemgetter(1))
 		return point_storage[:k]
 			
@@ -126,18 +126,18 @@ class KNN:
 		new_example = []
 		for dict_index in range(len(self.label_mapping_dicts)):
 			if not self.label_mapping_dicts[dict_index] == None:
-				new_example.extend([self.label_mapping_dicts[dict_index][x[dict_index].lower()]])
+				new_example.append(self.label_mapping_dicts[dict_index][x[dict_index].lower()])
 			else:
-				new_example.extend([x[dict_index]])
+				new_example.append(x[dict_index])
 		return (new_example)
 	def transform_example_volitile(self, x):
 		transformed_x = []
 		for dict_index in range(len(self.label_mapping_dicts)):
 			if not self.label_mapping_dicts[dict_index] == None:
 				try:
-					transformed_x.extend([self.label_mapping_dicts[dict_index][x[dict_index].lower()]])
+					transformed_x.append(self.label_mapping_dicts[dict_index][x[dict_index].lower()])
 				except KeyError:
-					transformed_x.extend([len(self.label_mapping_dicts[dict_index])])
+					transformed_x.append(len(self.label_mapping_dicts[dict_index]))
 			else:
-				transformed_x.extend([x[dict_index]])
+				transformed_x.append(x[dict_index])
 		return transformed_x

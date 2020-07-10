@@ -66,7 +66,7 @@ class MYSQLDataManipulator:
         column_declarations = []
         
         for column_declaration in columns:
-            column_declarations.extend([" ".join(column_declaration)])
+            column_declarations.append(" ".join(column_declaration))
         
         columnString = ",".join(column_declarations)
         

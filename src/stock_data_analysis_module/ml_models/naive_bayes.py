@@ -18,9 +18,9 @@ class NaiveBayes:
 		ret_model = NaiveBayes(self.assume_all_features_known)
 		ret_model.class_mapping_dictionary = self.class_mapping_dictionary.copy()
 		for self_dict in self.feature_mapping_dictionaries:
-			ret_model.feature_mapping_dictionaries.extend([self_dict.copy()])
+			ret_model.feature_mapping_dictionaries.append(self_dict.copy())
 		for self_dict in self.feature_probability_tables:
-			ret_model.feature_probability_tables.extend([self_dict.copy()])
+			ret_model.feature_probability_tables.append(self_dict.copy())
 		ret_model.class_probability_table = self.class_probability_table.copy()
 		return ret_model
 		
@@ -111,7 +111,7 @@ class NaiveBayes:
 				for x in range(len(dict_split)):
 					entry_split = dict_split[x].split("=")
 					temp_dict[entry_split[0]] = int(entry_split[1].rstrip())
-				self.feature_mapping_dictionaries.extend([temp_dict])
+				self.feature_mapping_dictionaries.append(temp_dict)
 			table_split = file.readline().split(" ")
 			self.__setup_probability_tables()
 			for x in range(len(table_split)):
@@ -185,7 +185,7 @@ class NaiveBayes:
 		#Add amount_of_features of tables into the mapping tables. Allowing space to save similar tables to
 		#the one done above in one list.
 		for feature_index in range(len(X[0])):
-			self.feature_mapping_dictionaries.extend([{}])
+			self.feature_mapping_dictionaries.append({})
 		
 		for feature_section in X:
 			for feature_index in range(len(feature_section)):
@@ -234,7 +234,7 @@ class NaiveBayes:
 		for x in range(n):
 			for entry in self.class_mapping_dictionary.items():
 				if entry[1] == indices_sorted[-x-1][0]:
-					ret.extend([entry[0]])
+					ret.append(entry[0])
 		return ret
 
 	#prediction method that obtains the conditional probabilities, and then multiplies them.
@@ -242,7 +242,7 @@ class NaiveBayes:
 	def __sub_predict(self, x):
 		feature_indices = []
 		for feature_index in range(len(x)):
-			feature_indices.extend([self.__index_from_label(str(x[feature_index]), self.feature_mapping_dictionaries[feature_index])])
+			feature_indices.append(self.__index_from_label(str(x[feature_index]), self.feature_mapping_dictionaries[feature_index]))
 		if -1 in feature_indices and self.assume_all_features_known:
 			raise TypeError("One of the values provided in " + str(x) + " has never been seen as a feature before. This is different than the feature being known, but one state having never been seen before.")
 		prediction_probabilites = []
@@ -258,8 +258,8 @@ class NaiveBayes:
 					curr_probability *= division_res
 				elif feature_indices[feature_index] == -1:
 					curr_probability *= self.__unknown_update(self.feature_probability_tables[feature_index], label_index)
-			prediction_probabilites.extend([curr_probability])
-		return prediction_probabilites;
+			prediction_probabilites.append(curr_probability)
+		return prediction_probabilites
 		
 	
 	#Generates the placeholder tables for class_probability_table & feature_probability_tables
@@ -269,8 +269,8 @@ class NaiveBayes:
 		for curr_dictionary_index in range(num_feature_dictionaries):
 			temp_feature_probability_table = []
 			for num in range(len(self.feature_mapping_dictionaries[curr_dictionary_index])):
-				temp_feature_probability_table.extend([["0/0"] * len(self.class_mapping_dictionary)])
-			self.feature_probability_tables.extend([temp_feature_probability_table])
+				temp_feature_probability_table.append(["0/0"] * len(self.class_mapping_dictionary))
+			self.feature_probability_tables.append(temp_feature_probability_table)
 
 	#In the event that a conditional probability equals zero when calculations need to occur, this method will simulate if one more example were given that had all the possible values the variable could have taken, and return that value.
 	#AKA (0 + (1 / number of possible values)) / current_denominator + 1

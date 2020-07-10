@@ -35,7 +35,7 @@ class Node:
 			entrySplit = str.split("=")
 			ret.path_mapping_dictionary[entrySplit[0]] = int(entrySplit[1])
 		for x in range(num_next_nodes):
-			ret.next_nodes.extend([TempNode(ret, x)])
+			ret.next_nodes.append(TempNode(ret, x))
 		return ret
 		
 	def __map_data(self, data):
@@ -57,8 +57,8 @@ class Node:
 				
 	def __setup_lists(self):
 		for x in range(len(self.path_mapping_dictionary)):
-			self.data_list.extend([[]])
-			self.next_nodes.extend([TempNode(self, x)])
+			self.data_list.append([])
+			self.next_nodes.append(TempNode(self, x))
 			
 	def __setup_class_mapping(self, data):
 		for x in data:
@@ -77,7 +77,7 @@ class Node:
 		for x in data:
 			currTrainingExample = x[0]
 			path_index = self.path_mapping_dictionary[currTrainingExample[self.feature_index]]
-			self.data_list[path_index].extend([x])
+			self.data_list[path_index].append(x)
 			
 	def getEntropy(self):
 		return self.__entropy
@@ -137,7 +137,7 @@ class Node:
 			end_nodes = []
 			for node in self.getNextNodes():
 				if not type(node) == type(self):
-					end_nodes.extend([node])
+					end_nodes.append(node)
 				else:
 					node_feature_index = node.feature_index
 					node_path_map = node.path_mapping_dictionary
@@ -280,7 +280,7 @@ class DecisionTree:
 		self.__init__()
 		dat = []
 		for index in range(len(X)):
-			dat.extend([[X[index], Y[index]]])
+			dat.append([X[index], Y[index]])
 		num_of_features = len(X[0])
 		self.__map_labels(Y)
 		root = None
@@ -288,7 +288,7 @@ class DecisionTree:
 		dataEntropy = self.__entropy(dat)
 		trialNodes = []
 		for x in range(num_of_features):
-			trialNodes.extend([Node(dat, x, [])])
+			trialNodes.append(Node(dat, x, []))
 		self.__root = self.__selectBestNode(trialNodes, dataEntropy)
 		nodes_to_grow = self.__root.getNextNodes()
 		while not len(nodes_to_grow) == 0:
@@ -299,13 +299,13 @@ class DecisionTree:
 				currTrialNodes = []
 				for index in range(len(possible_indexes)):
 					if possible_indexes[index]:
-						currTrialNodes.extend([Node(currData, index, node.getParent().getUsedFeatures())])
+						currTrialNodes.append(Node(currData, index, node.getParent().getUsedFeatures()))
 				parent_entropy = node.getParent().getEntropy()
 				node.getParent().setNextNode(self.__selectBestNode(currTrialNodes, parent_entropy), node.getIndex())
 				if len(node.getParent().getUsedFeatures()) == num_of_features or node.getParent().getNextNodes()[node.getIndex()].getEntropy() <= .2:
 					node.getParent().setNextNode(EndNode(node.getParent().getDataForPath(node.getIndex())), node.getIndex())
 					curr_used = []
-					curr_used.extend([node.getParent().getNextNodes()[node.getIndex()].getClass()])
+					curr_used.append(node.getParent().getNextNodes()[node.getIndex()].getClass())
 					curr_used.extend(node.getParent().getUsedFeatures())
 					continue
 				temp_nodes.extend(node.getParent().getNextNodes()[node.getIndex()].getNextNodes())
