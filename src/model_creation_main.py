@@ -1,8 +1,7 @@
 import os
 import importlib
 from data_providing_module.data_provider_registry import registry
-from general_utils.config.config_parser_singleton import read_login_credentials, parser, \
-    update_config, read_execution_options
+from general_utils.config.config_parser_singleton import parser, update_config, read_execution_options
 from general_utils.logging import logger
 
 os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
@@ -10,7 +9,6 @@ os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
 if __name__ == "__main__":
     import sys
     args = sys.argv[1:]
-    host, user, database = read_login_credentials()
     providers = os.listdir("data_providing_module/data_providers")
     for provider in providers:
         if provider.startswith('__'):
@@ -31,7 +29,7 @@ if __name__ == "__main__":
         for consumer, _, _ in consumer_list:
             consumer.load_configuration(parser)
     update_config()
-    ret_predictions = registry.passData([host, user, None, database], args[0], stop_for_errors=True)
+    ret_predictions = registry.passData(args[0], stop_for_errors=True)
     predict = read_execution_options()
     if predict:
         for passback, predictions in ret_predictions.items():

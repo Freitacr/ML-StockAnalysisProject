@@ -1,15 +1,16 @@
 from configparser import ConfigParser, SectionProxy
+from datetime import datetime as dt, timedelta as td
+import numpy as np
 
 from data_providing_module.data_provider_registry import registry, DataProviderBase
 from data_providing_module.data_providers import data_provider_static_names
-from datetime import datetime as dt, timedelta as td
 from stock_data_analysis_module.data_processing_module.data_retrieval_module.ranged_data_retriever import RangedDataRetriever
 from stock_data_analysis_module.indicators.moving_average import SMA
 from stock_data_analysis_module.indicators.bollinger_band import bollinger_band
 from stock_data_analysis_module.indicators.stochastic_oscillator import stochastic_oscillator
 from general_utils.config import config_util as cfgUtil
 from general_utils.logging import logger
-import numpy as np
+from general_utils.mysql_management.mysql_tables import stock_data_table
 
 
 ENABLED_CONFIG_ID = "enabled"
@@ -17,7 +18,7 @@ ENABLED_CONFIG_ID = "enabled"
 
 class IndicatorBlockProvider(DataProviderBase):
 
-    def generatePredictionData(self, login_credentials, *args, **kwargs):
+    def generatePredictionData(self, *args, **kwargs):
         if len(args) < 1:
             raise ValueError("Expected %d positional argument but received %d" % (1, len(args)))
         data_block_length = args[0]
@@ -32,8 +33,15 @@ class IndicatorBlockProvider(DataProviderBase):
         start_date = dt.now() - td(weeks=(padded_data_block_length + 360) // 5)
         start_date = start_date.isoformat()[:10].replace('-', '/')
         end_date = dt.now().isoformat()[:10].replace('-', '/')
-        data_retriever = RangedDataRetriever(login_credentials, ['high_price, low_price, close_price, volume_data'],
-                                             start_date, end_date)
+        data_retriever = RangedDataRetriever(
+            [
+                stock_data_table.HIGH_PRICE_COLUMN_NAME,
+                stock_data_table.LOW_PRICE_COLUMN_NAME,
+                stock_data_table.CLOSING_PRICE_COLUMN_NAME,
+                stock_data_table.VOLUME_COLUMN_NAME
+            ],
+            start_date,
+            end_date)
         ret_blocks = []
         for ticker, sources in data_retriever.data_sources.items():
             ticker_data = data_retriever.retrieveData(ticker, sources[0])
@@ -99,7 +107,7 @@ class IndicatorBlockProvider(DataProviderBase):
         if not enabled:
             registry.deregisterProvider(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID)
 
-    def generateData(self, login_credentials, *args, **kwargs):
+    def generateData(self, *args, **kwargs):
         if len(args) < 1:
             raise ValueError("Expected %d positional argument but received %d" % (1, len(args)))
         data_block_length = args[0]
@@ -114,8 +122,15 @@ class IndicatorBlockProvider(DataProviderBase):
         start_date = dt.now() - td(weeks=(padded_data_block_length+360)//5)
         start_date = start_date.isoformat()[:10].replace('-', '/')
         end_date = dt.now().isoformat()[:10].replace('-', '/')
-        data_retriever = RangedDataRetriever(login_credentials, ['high_price, low_price, close_price, volume_data'],
-                                             start_date, end_date)
+        data_retriever = RangedDataRetriever(
+            [
+                stock_data_table.HIGH_PRICE_COLUMN_NAME,
+                stock_data_table.LOW_PRICE_COLUMN_NAME,
+                stock_data_table.CLOSING_PRICE_COLUMN_NAME,
+                stock_data_table.VOLUME_COLUMN_NAME
+            ],
+            start_date,
+            end_date)
         ret_blocks = []
         for ticker, sources in data_retriever.data_sources.items():
             ticker_data = data_retriever.retrieveData(ticker, sources[0])

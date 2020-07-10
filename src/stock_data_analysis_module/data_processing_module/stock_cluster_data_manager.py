@@ -7,7 +7,7 @@ from typing import List
 
 class StockClusterDataManager:
 
-    def __init__(self, login_credentials: List[str], start_date: str = None,
+    def __init__(self, start_date: str = None,
                  end_date: str = None, num_similar_stocks: int = 12, column_list: List[str] = None):
         if start_date is None:
             start = dt.datetime.now()
@@ -17,11 +17,10 @@ class StockClusterDataManager:
             end = dt.datetime.now()
             end_date = end.isoformat()[:10].replace('-', '/')
         self.clusterCreator = StockClusterCreator(
-            login_credentials, start_date, end_date, num_similar_stocks, column_list
+            start_date, end_date, num_similar_stocks, column_list
         )
         availableTickers = [x for x in self.clusterCreator.dataRetriever.data_sources.keys()]
         self.clusters = self.clusterCreator.createClusters(availableTickers)
-        self.clusterCreator.close()
 
     def retrieveTrainingData(self, numDaysPerExample=20, expectation_columns=None):
         ret_x_train, ret_y_train, ret_x_test, ret_y_test = [], [], [], []

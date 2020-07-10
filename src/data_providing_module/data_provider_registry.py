@@ -37,11 +37,11 @@ class DataProviderBase (Configurable, ABC):
         super(DataProviderBase, self).__init__()
 
     @abstractmethod
-    def generateData(self, login_credentials, *args, **kwargs):
+    def generateData(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def generatePredictionData(self, login_credentials, *args, **kwargs):
+    def generatePredictionData(self, *args, **kwargs):
         pass
 
 
@@ -77,7 +77,7 @@ class DataProviderRegistry:
         if providerDataKey in self.consumers:
             self.consumers.pop(providerDataKey)
 
-    def passData(self, login_credentials, output_dir, stop_for_errors=False, print_errors=True):
+    def passData(self, output_dir, stop_for_errors=False, print_errors=True):
         provider = None
         consumer = None
         columns = None
@@ -102,10 +102,10 @@ class DataProviderRegistry:
                         raise ValueError("Invalid number of consumer registration arguments")
 
                     if not predict:
-                        consumer.consumeData(provider.generateData(login_credentials, *args), passback, output_dir)
+                        consumer.consumeData(provider.generateData(*args), passback, output_dir)
                     else:
                         ret_predictions[passback] = consumer.predictData(
-                            provider.generatePredictionData(login_credentials, *args),
+                            provider.generatePredictionData(*args),
                             passback,
                             output_dir
                         )

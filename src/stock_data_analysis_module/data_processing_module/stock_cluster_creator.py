@@ -73,8 +73,7 @@ def constructCluster(coefficientPair, tickerList, tickerData):
 
 class StockClusterCreator:
 
-    def __init__(self, login_credentials, start_date, end_date, similar_tickers=5, columns=None):
-        column_list = None
+    def __init__(self, start_date, end_date, similar_tickers=5, columns=None):
         if columns is None:
             column_list = ['hist_date', 'adj_close']
         else:
@@ -84,7 +83,7 @@ class StockClusterCreator:
             column_list = ['hist_date']
             for column in columns:
                 column_list.append(column)
-        self.dataRetriever = RangedDataRetriever(login_credentials, column_list, start_date, end_date)
+        self.dataRetriever = RangedDataRetriever(column_list, start_date, end_date)
         self.similarTickers = similar_tickers
         
     def createClusters(self, ticker_list):
@@ -126,6 +125,3 @@ class StockClusterCreator:
             ret_clusters.append(constructCluster(coeff_pairs[i], ticker_list, ticker_data))
         
         return ret_clusters
-
-    def close(self):
-        self.dataRetriever.close()

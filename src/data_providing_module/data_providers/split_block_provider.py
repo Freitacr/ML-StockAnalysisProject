@@ -11,7 +11,7 @@ ENABLED_CONFIG_ID = "enabled"
 
 class SplitBlockProvider(DataProviderBase):
 
-    def generatePredictionData(self, login_credentials, *args, **kwargs):
+    def generatePredictionData(self, *args, **kwargs):
         pass
 
     def __init__(self):
@@ -29,7 +29,7 @@ class SplitBlockProvider(DataProviderBase):
         if not enabled:
             registry.deregisterProvider(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID)
 
-    def generateData(self, login_credentials, *args, **kwargs):
+    def generateData(self, *args, **kwargs):
         if len(args) <= 1:
             raise ValueError('Expected at least the first argument from the following list;' +
                              ' train_columns: List["str"], expectation_columns: List["int"]')
@@ -40,7 +40,7 @@ class SplitBlockProvider(DataProviderBase):
         start_date = dt.now() - td(weeks=(52 * 4))
         start_date = start_date.isoformat()[:10].replace('-', '/')
         end_date = dt.now().isoformat()[:10].replace('-', '/')
-        data_retriever = StockClusterDataManager(login_credentials, start_date, end_date, column_list=columns)
+        data_retriever = StockClusterDataManager(start_date, end_date, column_list=columns)
         return data_retriever.retrieveTrainingDataMovementTargetsSplit(expectation_columns=expectation_columns)
 
 

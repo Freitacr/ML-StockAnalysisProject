@@ -21,7 +21,6 @@ class DataFormatterRegistry:
     def __init__(self):
         '''Initialization method
         @param ticker_list: List of stock tickers to obtain and format data for
-        @param login_credentials: Login credentials for the MySQL Server
         '''
         self.formatter_registry: Set[DataFormatter] = set()
 
