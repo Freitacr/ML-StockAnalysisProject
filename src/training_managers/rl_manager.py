@@ -40,7 +40,7 @@ def build_network(learning_rate, n_actions, input_shape, flatten_dense_dims):
 
 class RLManager(DataConsumerBase):
 
-    def predictData(self, data, passback, in_model_dir):
+    def predict_data(self, data, passback, in_model_dir):
         env = MultiSequentialBlockEnvironment()
         input_shape = (1, 8, 5)
         agent = Agent(input_shape, learning_rate=0.0, n_actions=3, network_assembly_function=build_network,
@@ -76,7 +76,7 @@ class RLManager(DataConsumerBase):
         enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
         self.load_checkpoint = parser.getboolean(section.name, LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER)
         if not enabled:
-            registry.deregisterConsumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self)
+            registry.deregister_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self)
 
     def write_default_configuration(self, section: "SectionProxy"):
         if ENABLED_CONFIGURATION_IDENTIFIER not in section.keys():
@@ -86,13 +86,13 @@ class RLManager(DataConsumerBase):
 
     def __init__(self):
         super(RLManager, self).__init__()
-        registry.registerConsumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self, [260],
-                                  passback="RL-Single")
+        registry.register_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self, [260],
+                                   passback="RL-Single")
         self.n_interations = 10000  # todo after configuration changes move this into a configuration file
         self.memory_size = 105000
         self.load_checkpoint = True
 
-    def consumeData(self, data, passback, output_dir):
+    def consume_data(self, data, passback, output_dir):
         logger.logger.log(logger.INFORMATION, "... training using RLManager ...")
         env = MultiSequentialBlockEnvironment()
         input_shape = (1, 8, 5)

@@ -179,7 +179,7 @@ def createModelsTrialByFire(data, passback, output_dir, max_layers_to_add: int =
 
 class CnnManager (DataConsumerBase):
 
-    def predictData(self, data, passback, in_model_dir):
+    def predict_data(self, data, passback, in_model_dir):
         pass
 
     def load_configuration(self, parser: "ConfigParser"):
@@ -188,8 +188,8 @@ class CnnManager (DataConsumerBase):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
         if not enabled:
-            registry.deregisterConsumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self)
-            registry.deregisterConsumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
+            registry.deregister_consumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self)
+            registry.deregister_consumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
 
     def write_default_configuration(self, section: "SectionProxy"):
         section[ENABLED_CONFIGURATION_IDENTIFIER] = 'False'
@@ -201,14 +201,14 @@ class CnnManager (DataConsumerBase):
 
     def __init__(self):
         super(CnnManager, self).__init__()
-        registry.registerConsumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self,
-                                  [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
+        registry.register_consumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self,
+                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
                                    [1]], passback='CombinedDataCNN')
-        registry.registerConsumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self,
-                                  [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
+        registry.register_consumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self,
+                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
                                    [1]], passback='SplitDataCNN')
 
-    def consumeData(self, data, passback, output_dir):
+    def consume_data(self, data, passback, output_dir):
         if not type(data) == dict:
             return
             createModelsTrialByFire(data, passback, output_dir)
