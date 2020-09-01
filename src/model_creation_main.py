@@ -29,7 +29,7 @@ if __name__ == "__main__":
         for consumer, _, _ in consumer_list:
             consumer.load_configuration(parser)
     update_config()
-    ret_predictions = registry.pass_data(args[0], stop_for_errors=True)
+    ret_predictions = registry.pass_data(args[0], stop_for_errors=False)
     predict = read_execution_options()
     if predict:
         for passback, predictions in ret_predictions.items():

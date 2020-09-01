@@ -281,7 +281,7 @@ class NaiveBayes:
 		
 		
 	#This is for the case in which a feature that has NEVER been encountered before (like if we are representing
-	# 10 different types out weather outside {i.e. rainy, overcast, sunny, etc} as the numbers 1-10
+	# 10 different types models weather outside {i.e. rainy, overcast, sunny, etc} as the numbers 1-10
 	# and the number 11 comes up when it comes time to predict. Naturally we can almost count this as just
 	# a weird new type of virtual training example, controlled by a boolean value as to whether it should be used.
 	def __unknown_update(self, table, col_num):

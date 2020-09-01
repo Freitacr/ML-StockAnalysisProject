@@ -30,6 +30,16 @@ from stock_data_analysis_module.indicators import stochastic_oscillator
 _ENABLED_CONFIG_ID = "enabled"
 
 
+def _standardize_price_data(price_data):
+    ret_data = numpy.copy(price_data)
+    ret_data = ret_data.flatten()
+    max_price = numpy.max(ret_data)
+    min_price = numpy.min(ret_data)
+    for i in range(len(ret_data)):
+        ret_data[i] = (ret_data[i]-min_price)/max_price
+    return ret_data.reshape(price_data.shape)
+
+
 class IndicatorBlockProvider(data_provider_registry.DataProviderBase):
     """Data Provider that will provide data constructed using stock indicators normally used by stock traders
 
@@ -232,19 +242,12 @@ class IndicatorBlockProvider(data_provider_registry.DataProviderBase):
             volume = ticker_data[:, 3]
 
             # high, low, close, volume = ticker_data  # unpack manually
-            avg_high = numpy.average(high)
-            avg_low = numpy.average(low)
-            avg_close = numpy.average(close)
-            avg_price = ((avg_high * len(high)) + (avg_low * len(high)) + (avg_close * len(high))) / (len(high) * 3)
-            avg_vol = numpy.average(volume)
-            std_high = [(high[i] - avg_price) / avg_price
-                        for i in range(len(high))]
-            std_low = [(low[i] - avg_price) / avg_price
-                       for i in range(len(high))]
-            std_close = [(close[i] - avg_price) / avg_price
-                         for i in range(len(high))]
-            volume = [(volume[i] - avg_vol) / avg_vol
-                      for i in range(len(volume))]
+
+            std_high = _standardize_price_data(high)
+            std_close = _standardize_price_data(close)
+            std_low = _standardize_price_data(low)
+            volume = _standardize_price_data(volume)
+
             if len(std_high) < padded_data_block_length:
                 len_warning = (
                         "Could not process %s into an indicator block, "

@@ -222,10 +222,10 @@ class DataProviderRegistry:
         provider = None
         consumer = None
         columns = None
-        try:
-            predict = read_execution_options()
-            ret_predictions = {}
-            for provKey, provider in self.providers.items():
+        predict = read_execution_options()
+        ret_predictions = {}
+        for provKey, provider in self.providers.items():
+            try:
                 if provKey not in self.consumers.keys():
                     continue
                 registeredConsumers = self.consumers[provKey]
@@ -250,20 +250,21 @@ class DataProviderRegistry:
                             passback,
                             output_dir
                         )
-            return ret_predictions
-        except Exception:
-            if print_errors:
-                traceback.print_exc()
-                logger.logger.log(logger.NON_FATAL_ERROR, "Above error was encountered during processing "
-                                                          "of the following provider/consumer pair")
-                logger.logger.log(
-                    logger.NON_FATAL_ERROR,
-                    "\t%s %s" % (type(provider), type(consumer))
-                )
-                logger.logger.log(logger.NON_FATAL_ERROR, "With the following columns as a data argument")
-                logger.logger.log(logger.NON_FATAL_ERROR, "\t%s" % str(columns))
-            if stop_for_errors:
-                return
+            except Exception:
+                if print_errors:
+                    traceback.print_exc()
+                    logger.logger.log(logger.NON_FATAL_ERROR, "Above error was encountered during processing "
+                                                              "of the following provider/consumer pair")
+                    logger.logger.log(
+                        logger.NON_FATAL_ERROR,
+                        "\t%s %s" % (type(provider), type(consumer))
+                    )
+                    logger.logger.log(logger.NON_FATAL_ERROR, "With the following columns as a data argument")
+                    logger.logger.log(logger.NON_FATAL_ERROR, "\t%s" % str(columns))
+                if stop_for_errors:
+                    return
+        return ret_predictions
+
 
 
 registry = DataProviderRegistry()

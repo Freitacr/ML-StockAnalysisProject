@@ -75,7 +75,7 @@ class YahooDataFormatting(data_formatting.DataFormatter):
         @param already_stored_dates: Dictionary mapping the upper cased ticker to a set of timestamps that already
             have data in the database.
         Attempts to download data from the ticker list, repeating any errored tickers up to two more times to get data
-        Then uses the down_days list to filter out unneeded data, returning data in the following format
+        Then uses the down_days list to filter models unneeded data, returning data in the following format
         @return: ['yahoo', [ [ticker, [day1data, day2data... dayNdata]] , [ticker2, ...] ... [tickerN, ...] ] ] 
         '''
         ret = []
