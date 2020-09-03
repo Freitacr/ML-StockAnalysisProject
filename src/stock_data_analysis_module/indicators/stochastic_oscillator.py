@@ -32,3 +32,20 @@ def stochastic_oscillator(
             ret_indicator[inf_index] = (ret_indicator[inf_index-1] + ret_indicator[inf_index+1]) / 2
 
     return ret_indicator
+
+
+def ad_oscillator(
+                    closing_data: Union["np.ndarray", List[float]],
+                    high_data: Union["np.ndarray", List[float]],
+                    low_data: Union["np.ndarray", List[float]]
+                 ) -> "np.ndarray":
+    if len(closing_data) < 2:
+        raise ValueError("Unable to calculate accumulation/distribution oscillator indicator for data of length %d"
+                         "and period of %d" % (len(closing_data), 2))
+    ret_indicator = np.zeros((len(closing_data)-1,), dtype=np.float32)
+    for i in range(len(closing_data)-1):
+        if high_data[i+1] == low_data[i+1]:
+            ret_indicator[i] = 0
+        else:
+            ret_indicator[i] = (high_data[i+1] - closing_data[i]) / (high_data[i+1] - low_data[i+1])
+    return ret_indicator

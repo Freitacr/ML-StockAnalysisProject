@@ -33,13 +33,11 @@ if __name__ == "__main__":
     predict = read_execution_options()
     if predict:
         for passback, predictions in ret_predictions.items():
-            for ticker, action_states in predictions.items():
+            for ticker, prediction in predictions.items():
                 logger.logger.log(logger.INFORMATION, "Predictions for %s" % ticker)
-                for action, state in action_states:
-                    logger.logger.log(
-                        logger.INFORMATION,
-                        "%s %s" % (str(action), str(state))
-                    )
-            # do something with the predictions
-            pass
-        pass
+                predicted_direction, observed_accuracy = prediction
+                logger.logger.log(
+                    logger.INFORMATION,
+                    "%s was theorized with an observed accuracy of %s" %
+                    (str(predicted_direction), str(observed_accuracy))
+                )

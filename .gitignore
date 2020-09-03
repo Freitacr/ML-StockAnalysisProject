@@ -3,6 +3,7 @@
 *.py[cod]
 *$py.class
 *.cmdl
+models
 
 configuration/*.ini
 model_data/

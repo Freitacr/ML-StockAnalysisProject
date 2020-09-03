@@ -44,6 +44,9 @@ class DataExportationManager(DataConsumerBase):
                                                                 self)
             data_provider_registry.registry.deregister_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID,
                                                                 self)
+            data_provider_registry.registry.deregister_consumer(
+                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
+                self)
 
     def __init__(self):
         super(DataExportationManager, self).__init__()
@@ -59,7 +62,10 @@ class DataExportationManager(DataConsumerBase):
         data_provider_registry.registry.register_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID,
                                                           self, [200],
                                                           data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID)
-
+        data_provider_registry.registry.register_consumer(
+            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
+            self, [252 * 10],
+            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID)
 
     def write_default_configuration(self, section: "SectionProxy"):
         if _ENABLED_CONFIGURATION_IDENTIFIER not in section.keys():
