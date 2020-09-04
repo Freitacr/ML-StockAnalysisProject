@@ -8,14 +8,15 @@
 from configparser import ConfigParser, SectionProxy
 from os import path
 import os
+import multiprocessing
 from typing import List
 
 from keras import layers
 from keras import optimizers
 from keras import losses
-from keras import activations
 import keras
 import numpy as np
+import tqdm
 
 from general_utils.config import config_util
 from general_utils.logging import logger
@@ -46,6 +47,26 @@ def create_ann(input_dim: int, hidden_dimensions: List[int], out_dimensions=None
     return model
 
 
+def handle_data(ticker, training_data, out_dir):
+    x, y_np = training_data
+    y = []
+    x = x.T
+    combined_examples = 22
+    combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
+    for i in range(len(x) - combined_examples + 1):
+        examples = x[i:i + combined_examples]
+        examples = examples.flatten()
+        combined_x[i] = examples
+
+    for i in range(combined_examples - 1, len(y_np)):
+        y.append([0, 1] if y_np[i] == 1 else [1, 0])
+    y = np.array(y)
+    model = create_ann(len(combined_x[0]), [5], 2)
+    model_callback = callbacks.HighestAccuracyModelStorageCallback(model, out_dir + f"{path.sep}{ticker}.ann")
+    model_hist = model.fit(combined_x, y, epochs=3000, validation_split=.2,
+                           verbose=0, callbacks=[model_callback])
+
+
 class AnnManager(data_provider_registry.DataConsumerBase):
 
     def __init__(self):
@@ -59,27 +80,17 @@ class AnnManager(data_provider_registry.DataConsumerBase):
         )
 
     def consume_data(self, data, passback, output_dir):
-        out_dir = output_dir + path.sep + "ann_models"
-        if not path.exists(out_dir):
-            os.mkdir(out_dir)
-        for ticker, training_data in data.items():
-            x, y_np = training_data
-            y = []
-            x = x.T
-            combined_examples = 22
-            combined_x = np.zeros((len(x)-combined_examples+1, len(x[0])*combined_examples))
-            for i in range(len(x)-combined_examples+1):
-                examples = x[i:i+combined_examples]
-                examples = examples.flatten()
-                combined_x[i] = examples
-
-            for i in range(combined_examples-1, len(y_np)):
-                y.append([0, 1] if y_np[i] == 1 else [1, 0])
-            y = np.array(y)
-            model = create_ann(len(combined_x[0]), [5], 2)
-            model_callback = callbacks.HighestAccuracyModelStorageCallback(model, out_dir + f"{path.sep}{ticker}.ann")
-            model_hist = model.fit(combined_x, y, epochs=3000, validation_split=.2,
-                                   verbose=2, callbacks=[model_callback])
+        open_threads = []
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+            out_dir = output_dir + path.sep + "ann_models"
+            if not path.exists(out_dir):
+                os.mkdir(out_dir)
+            for ticker, training_data in data.items():
+                open_threads.append(pool.apply_async(handle_data, [ticker, training_data, out_dir]))
+            for t in tqdm.tqdm(open_threads):
+                t.get()
+                # model_hist = model.fit(combined_x, y, epochs=3000, validation_split=.2,
+                #                        verbose=2, callbacks=[model_callback])
 
     def predict_data(self, data, passback, in_model_dir):
         model_dir = in_model_dir + path.sep + 'ann_models'
@@ -142,7 +153,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
                 )
 
     def write_default_configuration(self, section: "SectionProxy"):
-        section[_ENABLED_CONFIGURATION_IDENTIFIER] = 'True'
+        section[_ENABLED_CONFIGURATION_IDENTIFIER] = 'False'
         section[_TDP_BLOCK_LENGTH_IDENTIFIER] = str(self._default_tdp_block_length)
 
 

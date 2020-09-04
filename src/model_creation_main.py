@@ -4,7 +4,7 @@ from data_providing_module.data_provider_registry import registry
 from general_utils.config.config_parser_singleton import parser, update_config, read_execution_options
 from general_utils.logging import logger
 
-os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
+# os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
 
 if __name__ == "__main__":
     import sys
