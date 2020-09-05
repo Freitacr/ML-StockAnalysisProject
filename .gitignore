@@ -6,6 +6,7 @@
 models
 
 configuration/*.ini
+configuration/*txt
 model_data/
 
 # Visual Studio Code Configuration directory
