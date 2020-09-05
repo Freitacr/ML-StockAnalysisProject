@@ -23,10 +23,12 @@ _MYSQL_CONVERSION_DICTIONARY = {
 }
 
 
-def _is_field_type(program_field_type: str, described_field_type: str) -> bool:
+def _is_field_type(program_field_type: str, described_field_type: Union[str, bytes]) -> bool:
     test_type_lower = program_field_type.lower()
     if test_type_lower in _MYSQL_CONVERSION_DICTIONARY:
         test_type_lower = _MYSQL_CONVERSION_DICTIONARY[test_type_lower]
+    if isinstance(described_field_type, bytes):
+        test_type_lower = test_type_lower.encode('utf-8')
     return described_field_type.startswith(test_type_lower)
 
 
