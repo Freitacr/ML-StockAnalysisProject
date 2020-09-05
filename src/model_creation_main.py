@@ -6,6 +6,14 @@ from general_utils.logging import logger
 
 # os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
 
+# suppress deprecation warnings in current thread
+from tensorflow.python.util import deprecation
+deprecation._PRINT_DEPRECATION_WARNINGS = False
+
+# suppress Tensorflow warnings and info in current thread
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+
 if __name__ == "__main__":
     import sys
     args = sys.argv[1:]
@@ -26,18 +34,11 @@ if __name__ == "__main__":
     for i in range(len(consumers)):
         consumers[i] = consumers[i][:]
     for consumer_list in consumers:
-        for consumer, _, _ in consumer_list:
-            consumer.load_configuration(parser)
+        for consumer in consumer_list:
+            consumer[0].load_configuration(parser)
     update_config()
     ret_predictions = registry.pass_data(args[0], stop_for_errors=False)
     predict = read_execution_options()
     if predict:
         for passback, predictions in ret_predictions.items():
-            for ticker, prediction in predictions.items():
-                logger.logger.log(logger.INFORMATION, "Predictions for %s" % ticker)
-                predicted_direction, observed_accuracy = prediction
-                logger.logger.log(
-                    logger.INFORMATION,
-                    "%s was theorized with an observed accuracy of %s" %
-                    (str(predicted_direction), str(observed_accuracy))
-                )
+            logger.logger.log(logger.INFORMATION, predictions)

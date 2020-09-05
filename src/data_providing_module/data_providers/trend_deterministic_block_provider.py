@@ -103,7 +103,22 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
                 logger.logger.log(logger.WARNING, len_warning)
                 continue
 
-            actual_trends = [1 if close[i] <= close[i+1] else -1 for i in range(len(close)-1)]
+            if not kwargs['trend_strength_labelling']:
+                actual_trends = [[0, 1] if close[i] <= close[i + 1] else [1, 0] for i in range(len(close) - 1)]
+            else:
+                actual_trends = []
+                for i in range(len(close)-1):
+                    percentage_diff = (close[i + 1] - close[i]) / close[i]
+                    if percentage_diff >= .01:
+                        actual_trends.append([0, 0, 0, 0, 1])
+                    elif percentage_diff >= .005:
+                        actual_trends.append([0, 0, 0, 1, 0])
+                    elif percentage_diff >= -.005:
+                        actual_trends.append([0, 0, 1, 0, 0])
+                    elif percentage_diff >= -.01:
+                        actual_trends.append([0, 1, 0, 0, 0])
+                    else:
+                        actual_trends.append([1, 0, 0, 0, 0])
 
             sma = moving_average.SMA(close, kwargs['sma_period'])
             for i in range(len(sma)-1):
@@ -222,7 +237,22 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
                 logger.logger.log(logger.WARNING, len_warning)
                 continue
 
-            actual_trends = [1 if close[i] <= close[i + 1] else -1 for i in range(len(close) - 1)]
+            if not kwargs['trend_strength_labelling']:
+                actual_trends = [[0, 1] if close[i] <= close[i + 1] else [1, 0] for i in range(len(close) - 1)]
+            else:
+                actual_trends = []
+                for i in range(len(close)-1):
+                    percentage_diff = (close[i+1]-close[i]) / close[i]
+                    if percentage_diff >= .01:
+                        actual_trends.append([0, 0, 0, 0, 1])
+                    elif percentage_diff >= .005:
+                        actual_trends.append([0, 0, 0, 1, 0])
+                    elif percentage_diff >= -.005:
+                        actual_trends.append([0, 0, 1, 0, 0])
+                    elif percentage_diff >= -.01:
+                        actual_trends.append([0, 1, 0, 0, 0])
+                    else:
+                        actual_trends.append([1, 0, 0, 0, 0])
 
             sma = moving_average.SMA(close, kwargs['sma_period'])
             for i in range(len(sma) - 1):
@@ -332,7 +362,8 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
             "oscillator_period": 10,
             "momentum_period": 10,
             "rate_of_change_period": 10,
-            'cci_period': 10
+            'cci_period': 10,
+            "trend_strength_labelling": False
         }
 
 

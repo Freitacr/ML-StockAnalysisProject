@@ -22,13 +22,8 @@ import tqdm
 from general_utils.config import config_util
 from general_utils.logging import logger
 from general_utils.keras import callbacks
-from general_utils.keras import suppression
 from data_providing_module import data_provider_registry
 from data_providing_module.data_providers import data_provider_static_names
-
-
-suppression.suppress_tf_deprecation_messages()
-suppression.suppress_tf_warnings_and_info()
 
 
 _ENABLED_CONFIGURATION_IDENTIFIER = 'enabled'
@@ -37,17 +32,17 @@ _TDP_BLOCK_LENGTH_IDENTIFIER = 'trend deterministic data provider block length'
 _OVERWRITE_EXISTING_MODELS_CONFIG_ID = 'overwrite existing'
 
 
-def create_ann(input_dim: int, hidden_dimensions: List[int], out_dimensions=None
+def create_ann(input_dim: int, hidden_dimensions: List[int], activations: List[str], out_dimensions=None
                ) -> keras.Model:
     if out_dimensions is None:
         out_dimensions = [1]
     input_layer = layers.Input((input_dim,))
     previous_layer = input_layer
-    for dim in hidden_dimensions:
-        layer = layers.Dense(dim, activation='tanh')(previous_layer)
+    for dim in range(len(hidden_dimensions)):
+        layer = layers.Dense(hidden_dimensions[dim], activation=activations[dim])(previous_layer)
         previous_layer = layer
-    # dropout = layers.Dropout(.6)(previous_layer)
-    out_layer = layers.Dense(out_dimensions, activation='tanh')(previous_layer)
+    previous_layer = layers.Dropout(.5)(previous_layer)
+    out_layer = layers.Dense(out_dimensions, activation='sigmoid')(previous_layer)
     out_layer = layers.Activation('softmax')(out_layer)
     model = keras.Model(inputs=input_layer, outputs=out_layer)
     model.compile(optimizers.Adam(lr=1e-5), loss=losses.categorical_crossentropy, metrics=['accuracy'])
@@ -55,10 +50,10 @@ def create_ann(input_dim: int, hidden_dimensions: List[int], out_dimensions=None
 
 
 def handle_data(ticker, training_data, out_dir, overwrite_model):
-    model_file_path = out_dir + f"{path.sep}{ticker}.ann"
+    model_file_path = out_dir + f"{path.sep}{ticker}_strength.ann"
     if path.exists(model_file_path) and not overwrite_model:
         return
-    x, y = training_data
+    x, y_np = training_data
     x = x.T
     combined_examples = 22
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
@@ -67,20 +62,21 @@ def handle_data(ticker, training_data, out_dir, overwrite_model):
         examples = examples.flatten()
         combined_x[i] = examples
 
-    model = create_ann(len(combined_x[0]), [5], 2)
+    model = create_ann(len(combined_x[0]), [100, 7], ['elu', 'tanh'], len(y_np[0]))
     validation_split = .2
     validation_examples = math.floor(validation_split * len(combined_x))
     valid_x = combined_x[-validation_examples:]
-    valid_y = y[-validation_examples:]
-    y = y[:validation_examples]
+    valid_y = y_np[-validation_examples:]
+    y = y_np[:validation_examples]
     combined_x = combined_x[:validation_examples]
-    model_callback = callbacks.HighestAccuracyModelStorageCallback(model, out_dir + f"{path.sep}{ticker}.ann")
+    model_callback = callbacks.HighestAccuracyModelStorageCallback(model, out_dir + f"{path.sep}{ticker}_strength.ann",
+                                                                   do_logging=False)
     model_hist = model.fit(combined_x, y, epochs=3000, validation_data=(valid_x, valid_y),
                            verbose=0, callbacks=[model_callback])
 
 
 def predict_data(ticker, model_dir, prediction_data):
-    model_path = model_dir + path.sep + f"{ticker}.ann"
+    model_path = model_dir + path.sep + f"{ticker}_strength.ann"
     if not path.exists(model_path):
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation")
@@ -94,7 +90,7 @@ def predict_data(ticker, model_dir, prediction_data):
         examples = examples.flatten()
         combined_x[i] = examples
 
-    y = np.array(y[-66:])
+    y = y[-66:]
     try:
         model: keras.Model = keras.models.load_model(model_path)
     except OSError:
@@ -107,7 +103,8 @@ def predict_data(ticker, model_dir, prediction_data):
         if np.argmax(generated_predictions[i]) == correct:
             correct_predictions += 1
     accuracy = correct_predictions / len(y)
-    return ticker, generated_predictions[-1], accuracy
+    actual_prediction = 'down' if np.argmax(generated_predictions[-1]) == 0 else 'up'
+    return ticker, actual_prediction, accuracy
 
 
 def string_serialize_predictions(predictions) -> str:
@@ -115,25 +112,32 @@ def string_serialize_predictions(predictions) -> str:
     for ticker, prediction_data in predictions.items():
         actual_prediction, observed_accuracy = prediction_data
         predicted = np.argmax(actual_prediction)
-        if predicted == 1:
-            prediction_str = "Trend Upward"
+        if predicted == 4:
+            prediction_str = "Strong trend upward"
+        elif predicted == 3:
+            prediction_str = "Slight trend upward"
+        elif predicted == 2:
+            prediction_str = "Stagnation"
+        elif predicted == 1:
+            prediction_str = "Slight trend downward"
         else:
-            prediction_str = "Trend Downward"
+            prediction_str = "Strong trend downward"
         ret_str += (f"Predictions for {ticker}\n"
                     f"{prediction_str} was theorized with an observed accuracy of {observed_accuracy}\n")
     return ret_str
 
 
-class AnnManager(data_provider_registry.DataConsumerBase):
+class AnnStrengthTrainingManager(data_provider_registry.DataConsumerBase):
 
     def __init__(self):
-        super(AnnManager, self).__init__()
+        super(AnnStrengthTrainingManager, self).__init__()
         self._default_tdp_block_length = 252 * 10
         data_provider_registry.registry.register_consumer(
             data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
             self,
             [self._default_tdp_block_length],
             data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
+            keyword_args={"trend_strength_labelling": True},
             prediction_string_serializer=string_serialize_predictions
         )
         self._overwite_existing = False
@@ -141,7 +145,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
     def consume_data(self, data, passback, output_dir):
         open_threads = []
         with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-            out_dir = output_dir + path.sep + "ann_models"
+            out_dir = output_dir + path.sep + "ann_strength_models"
             if not path.exists(out_dir):
                 os.mkdir(out_dir)
             for ticker, training_data in data.items():
@@ -153,7 +157,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
                 #                        verbose=2, callbacks=[model_callback])
 
     def predict_data(self, data, passback, in_model_dir):
-        model_dir = in_model_dir + path.sep + 'ann_models'
+        model_dir = in_model_dir + path.sep + "ann_strength_models"
         if not path.exists(model_dir):
             raise FileNotFoundError("Model storage directory for ANN prediction does not exist. Please run model "
                                     "creation without the prediction flag set to true to create models used in "
@@ -190,6 +194,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
                     self,
                     [block_length],
                     data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
+                    keyword_args={"trend_strength_labelling": True},
                     prediction_string_serializer=string_serialize_predictions
                 )
         self._overwite_existing = parser.getboolean(section.name, _OVERWRITE_EXISTING_MODELS_CONFIG_ID)
@@ -200,4 +205,4 @@ class AnnManager(data_provider_registry.DataConsumerBase):
         section[_OVERWRITE_EXISTING_MODELS_CONFIG_ID] = 'False'
 
 
-consumer = AnnManager()
+consumer = AnnStrengthTrainingManager()

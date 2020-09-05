@@ -32,7 +32,7 @@ Module Contents:
 import traceback
 from abc import abstractmethod, ABC
 from configparser import ConfigParser, SectionProxy
-from typing import Dict, Tuple, List, Any
+from typing import Dict, Tuple, List, Any, Mapping, Callable
 from general_utils.config.config_parser_singleton import read_execution_options
 from general_utils.logging import logger
 
@@ -191,14 +191,20 @@ class DataProviderRegistry:
     def __init__(self):
         self.providers: Dict[str, "DataProviderBase"] = {}
         self.consumers: Dict[str, List[Tuple["DataConsumerBase", List[Any], Any]]] = {}
+        self._prediction_string_serializers: Dict[str, Callable[[Any], str]] = {}
 
     def register_provider(self, providerDataKey: str, provider: "DataProviderBase"):
         self.providers[providerDataKey] = provider
 
-    def register_consumer(self, providerDataKey: str, consumer, positional_arguments, passback=None):
+    def register_consumer(self, providerDataKey: str, consumer, positional_arguments,
+                          passback=None, keyword_args: Mapping[str, Any] = None,
+                          prediction_string_serializer: Callable[[Any], str] = None):
         if providerDataKey not in self.consumers:
             self.consumers[providerDataKey] = []
-        self.consumers[providerDataKey].append((consumer, positional_arguments, passback))
+        key_args = keyword_args if keyword_args is not None else {}
+        self.consumers[providerDataKey].append((consumer, positional_arguments, passback, key_args))
+        if prediction_string_serializer is not None:
+            self._prediction_string_serializers[str(type(consumer)) + str(passback)] = prediction_string_serializer
 
     def deregister_consumer(self, providerDataKey: str, consumer):
         if providerDataKey not in self.consumers:
@@ -206,8 +212,7 @@ class DataProviderRegistry:
         reg_consumers = self.consumers[providerDataKey]
         to_rem = []
         for consumer_list in reg_consumers:
-            reg_consumer, _, _ = consumer_list
-            if reg_consumer == consumer:
+            if consumer_list[0] == consumer:
                 to_rem.append(consumer_list)
         for obj in to_rem:
             self.consumers[providerDataKey].remove(obj)
@@ -229,27 +234,34 @@ class DataProviderRegistry:
                 if provKey not in self.consumers.keys():
                     continue
                 registeredConsumers = self.consumers[provKey]
-                for consumerSet in registeredConsumers:
+                for consumer_set in registeredConsumers:
                     consumer = None
                     args = None
                     passback = None
-                    if len(consumerSet) == 3:
-                        consumer, args, passback = consumerSet
-                    elif len(consumerSet) == 2:
-                        consumer, args = consumerSet
-                    elif len(consumerSet) == 1:
-                        consumer = consumerSet[0]
+                    keyword_args = {}
+                    if len(consumer_set) == 3:
+                        consumer, args, passback = consumer_set
+                    elif len(consumer_set) == 2:
+                        consumer, args = consumer_set
+                    elif len(consumer_set) == 1:
+                        consumer = consumer_set[0]
+                    elif len(consumer_set) == 4:
+                        consumer, args, passback, keyword_args = consumer_set
                     else:
                         raise ValueError("Invalid number of consumer registration arguments")
 
                     if not predict:
-                        consumer.consume_data(provider.generate_data(*args), passback, output_dir)
+                        consumer.consume_data(provider.generate_data(*args, **keyword_args), passback, output_dir)
                     else:
-                        ret_predictions[passback] = consumer.predict_data(
-                            provider.generate_prediction_data(*args),
+                        predictions = consumer.predict_data(
+                            provider.generate_prediction_data(*args, **keyword_args),
                             passback,
                             output_dir
                         )
+                        consumer_passback_id = str(type(consumer)) + str(passback)
+                        if consumer_passback_id in self._prediction_string_serializers:
+                            predictions = self._prediction_string_serializers[consumer_passback_id](predictions)
+                        ret_predictions[consumer_passback_id] = predictions
             except Exception:
                 if print_errors:
                     traceback.print_exc()
