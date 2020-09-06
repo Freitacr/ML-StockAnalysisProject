@@ -227,7 +227,7 @@ class DataProviderRegistry:
         provider = None
         consumer = None
         columns = None
-        predict = read_execution_options()
+        predict, _ = read_execution_options()
         ret_predictions = {}
         for provKey, provider in self.providers.items():
             try:

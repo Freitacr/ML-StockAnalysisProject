@@ -38,7 +38,7 @@ if __name__ == "__main__":
             consumer[0].load_configuration(parser)
     update_config()
     ret_predictions = registry.pass_data(args[0], stop_for_errors=False)
-    predict = read_execution_options()
+    predict, _ = read_execution_options()
     if predict:
         for passback, predictions in ret_predictions.items():
             logger.logger.log(logger.INFORMATION, predictions)
