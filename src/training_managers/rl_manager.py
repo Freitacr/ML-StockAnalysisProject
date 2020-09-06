@@ -4,6 +4,7 @@ from keras import Sequential
 
 from general_utils.config import config_util as cfg_util
 from general_utils.logging import logger
+from data_providing_module import configurable_registry
 from data_providing_module.data_provider_registry import DataConsumerBase, registry
 from stock_data_analysis_module.reinforcement_learning.environment.multi_sequential_block_environment \
     import MultiSequentialBlockEnvironment
@@ -75,8 +76,9 @@ class RLManager(DataConsumerBase):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
         self.load_checkpoint = parser.getboolean(section.name, LOAD_CHECKPOINT_CONFIGURATION_IDENTIFIER)
-        if not enabled:
-            registry.deregister_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self)
+        if enabled:
+            registry.register_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self, [260],
+                                       passback="RL-Single")
 
     def write_default_configuration(self, section: "SectionProxy"):
         if ENABLED_CONFIGURATION_IDENTIFIER not in section.keys():
@@ -86,8 +88,7 @@ class RLManager(DataConsumerBase):
 
     def __init__(self):
         super(RLManager, self).__init__()
-        registry.register_consumer(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self, [260],
-                                   passback="RL-Single")
+        configurable_registry.config_registry.register_configurable(self)
         self.n_interations = 10000  # todo after configuration changes move this into a configuration file
         self.memory_size = 105000
         self.load_checkpoint = True

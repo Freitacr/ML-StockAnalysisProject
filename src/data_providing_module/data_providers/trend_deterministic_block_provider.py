@@ -16,6 +16,7 @@ import datetime
 import numpy as np
 
 from data_providing_module.data_providers import data_provider_static_names
+from data_providing_module import configurable_registry
 from data_providing_module import data_provider_registry
 from general_utils.config import config_util
 from general_utils.logging import logger
@@ -222,9 +223,9 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
         if not parser.has_option(section.name, _ENABLED_CONFIG_ID):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, _ENABLED_CONFIG_ID)
-        if not enabled:
-            data_provider_registry.registry.deregister_provider(
-                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID)
+        if enabled:
+            data_provider_registry.registry.register_provider(
+                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID, self)
 
     def write_default_configuration(self, section: "configparser.SectionProxy"):
         section[_ENABLED_CONFIG_ID] = 'True'
@@ -232,8 +233,7 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
     def __init__(self):
 
         super(TrendDeterministicBlockProvider, self).__init__()
-        data_provider_registry.registry.register_provider(
-            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID, self)
+        configurable_registry.config_registry.register_configurable(self)
         self.default_kwargs = {
             "sma_period": 10,
             "wma_period": 10,

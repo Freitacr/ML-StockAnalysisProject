@@ -23,6 +23,7 @@ from general_utils.config import config_util
 from general_utils.logging import logger
 from general_utils.keras import callbacks
 from data_providing_module import data_provider_registry
+from data_providing_module import configurable_registry
 from data_providing_module.data_providers import data_provider_static_names
 
 
@@ -132,14 +133,7 @@ class AnnStrengthTrainingManager(data_provider_registry.DataConsumerBase):
     def __init__(self):
         super(AnnStrengthTrainingManager, self).__init__()
         self._default_tdp_block_length = 252 * 10
-        data_provider_registry.registry.register_consumer(
-            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-            self,
-            [self._default_tdp_block_length],
-            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-            keyword_args={"trend_strength_labelling": True},
-            prediction_string_serializer=string_serialize_predictions
-        )
+        configurable_registry.config_registry.register_configurable(self)
         self._overwite_existing = False
 
     def consume_data(self, data, passback, output_dir):
@@ -179,25 +173,17 @@ class AnnStrengthTrainingManager(data_provider_registry.DataConsumerBase):
         if not parser.has_option(section.name, _ENABLED_CONFIGURATION_IDENTIFIER):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, _ENABLED_CONFIGURATION_IDENTIFIER)
-        if not enabled:
-            data_provider_registry.registry.deregister_consumer(
-                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID, self
-            )
-        else:
-            block_length = parser.getint(section.name, _TDP_BLOCK_LENGTH_IDENTIFIER)
-            if block_length != self._default_tdp_block_length:
-                data_provider_registry.registry.deregister_consumer(
-                    data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID, self
-                )
-                data_provider_registry.registry.register_consumer(
-                    data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-                    self,
-                    [block_length],
-                    data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-                    keyword_args={"trend_strength_labelling": True},
-                    prediction_string_serializer=string_serialize_predictions
-                )
         self._overwite_existing = parser.getboolean(section.name, _OVERWRITE_EXISTING_MODELS_CONFIG_ID)
+        if enabled:
+            block_length = parser.getint(section.name, _TDP_BLOCK_LENGTH_IDENTIFIER)
+            data_provider_registry.registry.register_consumer(
+                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
+                self,
+                [block_length],
+                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
+                keyword_args={"trend_strength_labelling": True},
+                prediction_string_serializer=string_serialize_predictions
+            )
 
     def write_default_configuration(self, section: "SectionProxy"):
         section[_ENABLED_CONFIGURATION_IDENTIFIER] = 'False'

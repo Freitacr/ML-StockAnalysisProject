@@ -1,6 +1,7 @@
 from configparser import ConfigParser, SectionProxy
 from general_utils.config import config_util as cfgUtil
 from data_providing_module.data_provider_registry import registry, DataConsumerBase
+from data_providing_module import configurable_registry
 from data_providing_module.data_providers import data_provider_static_names
 from stock_data_analysis_module.ml_models.keras_cnn import trainNetwork
 from keras.layers import Conv2D, Dropout, Flatten, Dense, MaxPool2D, AveragePooling2D, Activation
@@ -187,9 +188,13 @@ class CnnManager (DataConsumerBase):
         if not parser.has_option(section.name, ENABLED_CONFIGURATION_IDENTIFIER):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIGURATION_IDENTIFIER)
-        if not enabled:
-            registry.deregister_consumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self)
-            registry.deregister_consumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
+        if enabled:
+            registry.register_consumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self,
+                                       [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
+                                        [1]], passback='CombinedDataCNN')
+            registry.register_consumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self,
+                                       [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
+                                        [1]], passback='SplitDataCNN')
 
     def write_default_configuration(self, section: "SectionProxy"):
         section[ENABLED_CONFIGURATION_IDENTIFIER] = 'False'
@@ -201,12 +206,7 @@ class CnnManager (DataConsumerBase):
 
     def __init__(self):
         super(CnnManager, self).__init__()
-        registry.register_consumer(data_provider_static_names.CLUSTERED_BLOCK_PROVIDER_ID, self,
-                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
-                                   [1]], passback='CombinedDataCNN')
-        registry.register_consumer(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self,
-                                   [['hist_date', 'adj_close', 'opening_price', 'volume_data', 'high_price'],
-                                   [1]], passback='SplitDataCNN')
+        configurable_registry.config_registry.register_configurable(self)
 
     def consume_data(self, data, passback, output_dir):
         if not type(data) == dict:

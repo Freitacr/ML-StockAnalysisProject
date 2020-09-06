@@ -25,6 +25,7 @@ from general_utils.logging import logger
 from general_utils.keras import callbacks
 from general_utils.keras import suppression
 from data_providing_module import data_provider_registry
+from data_providing_module import configurable_registry
 from data_providing_module.data_providers import data_provider_static_names
 
 
@@ -140,16 +141,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
         self._overwite_existing = False
         self._combined_examples_factor = 22
         self._ema_periods = [10]
-
-        data_provider_registry.registry.register_consumer(
-            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-            self,
-            [self._default_tdp_block_length],
-            data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-            {"trend_lookahead": self._trend_lookahead,
-             "ema_period": self._ema_periods},
-            prediction_string_serializer=string_serialize_predictions
-        )
+        configurable_registry.config_registry.register_configurable(self)
 
     def consume_data(self, data, passback, output_dir):
         open_threads = []
@@ -205,15 +197,8 @@ class AnnManager(data_provider_registry.DataConsumerBase):
         ema_periods = parser.get(section.name, _EMA_PERIODS_IDENTIFIER)
         ema_periods = ema_periods.split(',')
         self._ema_periods = [int(x) for x in ema_periods]
-        if not enabled:
-            data_provider_registry.registry.deregister_consumer(
-                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID, self
-            )
-        else:
-            block_length = parser.getint(section.name, _TDP_BLOCK_LENGTH_IDENTIFIER)
-            data_provider_registry.registry.deregister_consumer(
-                data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID, self
-            )
+        block_length = parser.getint(section.name, _TDP_BLOCK_LENGTH_IDENTIFIER)
+        if enabled:
             data_provider_registry.registry.register_consumer(
                 data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
                 self,

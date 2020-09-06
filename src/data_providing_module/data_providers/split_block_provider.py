@@ -14,6 +14,7 @@ A detailed argument list that is required by this provider can be found in the g
 from datetime import datetime as dt, timedelta as td
 import configparser
 
+from data_providing_module import configurable_registry
 from data_providing_module import data_provider_registry
 from data_providing_module.data_providers import data_provider_static_names
 from stock_data_analysis_module.data_processing_module import stock_cluster_data_manager
@@ -49,7 +50,7 @@ class SplitBlockProvider(data_provider_registry.DataProviderBase):
 
         """
         super(SplitBlockProvider, self).__init__()
-        data_provider_registry.registry.register_provider(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
+        configurable_registry.config_registry.register_configurable(self)
 
     def write_default_configuration(self, section: "configparser.SectionProxy"):
         """Writes default configuration values into the SectionProxy provided.
@@ -67,8 +68,8 @@ class SplitBlockProvider(data_provider_registry.DataProviderBase):
         if not parser.has_option(section.name, ENABLED_CONFIG_ID):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, ENABLED_CONFIG_ID)
-        if not enabled:
-            data_provider_registry.registry.deregister_provider(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID)
+        if enabled:
+            data_provider_registry.registry.register_provider(data_provider_static_names.SPLIT_BLOCK_PROVIDER_ID, self)
 
     def generate_data(self, *args, **kwargs):
         """Generates data for Consumers to use by clustering together stocks in a time period,

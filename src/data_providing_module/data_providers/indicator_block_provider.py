@@ -15,6 +15,7 @@ import datetime
 
 import numpy
 
+from data_providing_module import configurable_registry
 from data_providing_module import data_provider_registry
 from data_providing_module.data_providers import data_provider_static_names
 
@@ -158,8 +159,9 @@ class IndicatorBlockProvider(data_provider_registry.DataProviderBase):
         if not parser.has_option(section.name, _ENABLED_CONFIG_ID):
             self.write_default_configuration(section)
         enabled = parser.getboolean(section.name, _ENABLED_CONFIG_ID)
-        if not enabled:
-            data_provider_registry.registry.deregister_provider(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID)
+        if enabled:
+            data_provider_registry.registry.register_provider(
+                data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self)
 
     def generate_data(self, *args, **kwargs):
         """Generates data using stock indicators over a set period of time
@@ -285,7 +287,7 @@ class IndicatorBlockProvider(data_provider_registry.DataProviderBase):
         """
 
         super(IndicatorBlockProvider, self).__init__()
-        data_provider_registry.registry.register_provider(data_provider_static_names.INDICATOR_BLOCK_PROVIDER_ID, self)
+        configurable_registry.config_registry.register_configurable(self)
         self.default_kwargs = {
             "sma_period": 50,
             "bollinger_band_stdev": 2,

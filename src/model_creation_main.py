@@ -1,5 +1,6 @@
 import os
 import importlib
+from data_providing_module import configurable_registry
 from data_providing_module.data_provider_registry import registry
 from general_utils.config.config_parser_singleton import parser, update_config, read_execution_options
 from general_utils.logging import logger
@@ -27,15 +28,7 @@ if __name__ == "__main__":
         if consumer.startswith('__'):
             continue
         importlib.import_module("training_managers." + consumer.replace('.py', ''))
-    providers = list(registry.providers.values())
-    for provider in providers:
-        provider.load_configuration(parser)
-    consumers = list(registry.consumers.values())
-    for i in range(len(consumers)):
-        consumers[i] = consumers[i][:]
-    for consumer_list in consumers:
-        for consumer in consumer_list:
-            consumer[0].load_configuration(parser)
+    configurable_registry.config_registry.handle_configurables(parser)
     update_config()
     ret_predictions = registry.pass_data(args[0], stop_for_errors=False)
     predict, _ = read_execution_options()
