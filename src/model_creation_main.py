@@ -29,9 +29,9 @@ if __name__ == "__main__":
             continue
         importlib.import_module("training_managers." + consumer.replace('.py', ''))
     configurable_registry.config_registry.handle_configurables(parser)
+    predict, max_processes, export_predictions = read_execution_options()
     update_config()
     ret_predictions = registry.pass_data(args[0], stop_for_errors=False)
-    predict, _ = read_execution_options()
-    if predict:
+    if predict and not export_predictions:
         for passback, predictions in ret_predictions.items():
             logger.logger.log(logger.INFORMATION, predictions)

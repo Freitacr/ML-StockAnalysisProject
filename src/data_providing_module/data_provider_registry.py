@@ -192,19 +192,23 @@ class DataProviderRegistry:
         self.providers: Dict[str, "DataProviderBase"] = {}
         self.consumers: Dict[str, List[Tuple["DataConsumerBase", List[Any], Any]]] = {}
         self._prediction_string_serializers: Dict[str, Callable[[Any], str]] = {}
+        self._data_exportation_functions: Dict[str, Callable[[Any, str], None]] = {}
 
     def register_provider(self, providerDataKey: str, provider: "DataProviderBase"):
         self.providers[providerDataKey] = provider
 
     def register_consumer(self, providerDataKey: str, consumer, positional_arguments,
                           passback=None, keyword_args: Mapping[str, Any] = None,
-                          prediction_string_serializer: Callable[[Any], str] = None):
+                          prediction_string_serializer: Callable[[Any], str] = None,
+                          data_exportation_function: Callable[[Any, str], None] = None):
         if providerDataKey not in self.consumers:
             self.consumers[providerDataKey] = []
         key_args = keyword_args if keyword_args is not None else {}
         self.consumers[providerDataKey].append((consumer, positional_arguments, passback, key_args))
         if prediction_string_serializer is not None:
             self._prediction_string_serializers[str(type(consumer)) + str(passback)] = prediction_string_serializer
+        if data_exportation_function is not None:
+            self._data_exportation_functions[str(type(consumer)) + str(passback)] = data_exportation_function
 
     def deregister_consumer(self, providerDataKey: str, consumer):
         if providerDataKey not in self.consumers:
@@ -227,7 +231,7 @@ class DataProviderRegistry:
         provider = None
         consumer = None
         columns = None
-        predict, _ = read_execution_options()
+        predict, _, export_data = read_execution_options()
         ret_predictions = {}
         for provKey, provider in self.providers.items():
             try:
@@ -259,8 +263,10 @@ class DataProviderRegistry:
                             output_dir
                         )
                         consumer_passback_id = str(type(consumer)) + str(passback)
-                        if consumer_passback_id in self._prediction_string_serializers:
+                        if consumer_passback_id in self._prediction_string_serializers and not export_data:
                             predictions = self._prediction_string_serializers[consumer_passback_id](predictions)
+                        elif consumer_passback_id in self._data_exportation_functions and export_data:
+                            self._data_exportation_functions[consumer_passback_id](predictions, output_dir)
                         ret_predictions[consumer_passback_id] = predictions
             except Exception:
                 if print_errors:
@@ -276,7 +282,6 @@ class DataProviderRegistry:
                 if stop_for_errors:
                     return
         return ret_predictions
-
 
 
 registry = DataProviderRegistry()

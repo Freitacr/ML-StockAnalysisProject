@@ -5,6 +5,7 @@ from general_utils.logging import logger
 EXECUTION_OPTIONS_SECTION_NAME = 'execution_options'
 EXECUTION_OPTIONS_PREDICT_IDENTIFIER = 'predict'
 EXECUTION_OPTIONS_MAX_PROCESSES_IDENTIFIER = 'Multiprocessing Max Processes'
+EXECUTION_OPTIONS_EXPORT_PREDICTIONS_IDENTIFIER = 'Export Predictions to CSV'
 
 LOGIN_CREDENTIALS_SECTION_NAME = 'login_credentials'
 LOGIN_CREDENTIALS_USER_IDENTIFIER = 'user'
@@ -70,7 +71,11 @@ def read_execution_options():
         EXECUTION_OPTIONS_SECTION_NAME,
         EXECUTION_OPTIONS_MAX_PROCESSES_IDENTIFIER
     )
-    return prediction, max_processes
+    export_predictions = parser.getboolean(
+        EXECUTION_OPTIONS_SECTION_NAME,
+        EXECUTION_OPTIONS_EXPORT_PREDICTIONS_IDENTIFIER
+    )
+    return prediction, max_processes, export_predictions
 
 
 def read_config_or_write_defaults():

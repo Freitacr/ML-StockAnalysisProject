@@ -15,6 +15,7 @@ import tqdm
 
 from general_utils.config import config_util
 from general_utils.config import config_parser_singleton
+from general_utils.exportation import csv_exportation
 from general_utils.logging import logger
 from data_providing_module import configurable_registry
 from data_providing_module import data_provider_registry
@@ -161,6 +162,14 @@ def string_serialize_predictions(predictions: Dict[str, Tuple[str, float]]) -> s
     return ret_str
 
 
+def export_predictions(predictions, output_dir) -> None:
+    exportation_columns = []
+    for ticker, prediction_data in predictions.items():
+        actual_prediction, observed_accuracy = prediction_data
+        exportation_columns.append((ticker, actual_prediction, observed_accuracy))
+    csv_exportation.export_predictions(exportation_columns, output_dir + path.sep + 'svm.csv')
+
+
 class SvmManager(data_provider_registry.DataConsumerBase):
 
     def __init__(self):
@@ -205,7 +214,8 @@ class SvmManager(data_provider_registry.DataConsumerBase):
                 self,
                 [block_length],
                 data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
-                prediction_string_serializer=string_serialize_predictions
+                prediction_string_serializer=string_serialize_predictions,
+                data_exportation_function=export_predictions
             )
 
     def write_default_configuration(self, section: "SectionProxy"):

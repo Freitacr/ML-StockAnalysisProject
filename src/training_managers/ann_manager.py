@@ -21,6 +21,7 @@ import tqdm
 
 from general_utils.config import config_util
 from general_utils.config import config_parser_singleton
+from general_utils.exportation import csv_exportation
 from general_utils.logging import logger
 from general_utils.keras import callbacks
 from general_utils.keras import suppression
@@ -132,6 +133,19 @@ def string_serialize_predictions(predictions) -> str:
     return ret_str
 
 
+def export_predictions(predictions, out_dir) -> None:
+    exportation_columns = []
+    for ticker, prediction_data in predictions.items():
+        actual_prediction, observed_accuracy = prediction_data
+        actual_prediction = np.argmax(actual_prediction)
+        if actual_prediction == 1:
+            prediction_str = "Trend Upward"
+        else:
+            prediction_str = "Trend Downward"
+        exportation_columns.append((ticker, prediction_str, observed_accuracy))
+    csv_exportation.export_predictions(exportation_columns, out_dir + path.sep + 'ann.csv')
+
+
 class AnnManager(data_provider_registry.DataConsumerBase):
 
     def __init__(self):
@@ -145,7 +159,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
 
     def consume_data(self, data, passback, output_dir):
         open_threads = []
-        _, max_processes = config_parser_singleton.read_execution_options()
+        _, max_processes, _ = config_parser_singleton.read_execution_options()
         max_processes = multiprocessing.cpu_count() if max_processes == -1 else max_processes
         with multiprocessing.Pool(max_processes) as pool:
             out_dir = output_dir + path.sep + "ann_models"
@@ -168,7 +182,7 @@ class AnnManager(data_provider_registry.DataConsumerBase):
                                     "creation without the prediction flag set to true to create models used in "
                                     "prediction.")
         predictions = {}
-        _, max_processes = config_parser_singleton.read_execution_options()
+        _, max_processes, _ = config_parser_singleton.read_execution_options()
         max_processes = multiprocessing.cpu_count() if max_processes == -1 else max_processes
         with multiprocessing.Pool(max_processes) as pool:
             working_threads = []
@@ -206,7 +220,8 @@ class AnnManager(data_provider_registry.DataConsumerBase):
                 data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
                 {"trend_lookahead": self._trend_lookahead,
                  "ema_period": self._ema_periods},
-                prediction_string_serializer=string_serialize_predictions
+                prediction_string_serializer=string_serialize_predictions,
+                data_exportation_function=export_predictions
             )
 
     def write_default_configuration(self, section: "SectionProxy"):
