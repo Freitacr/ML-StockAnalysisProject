@@ -1,18 +1,27 @@
 from datetime import datetime as dt
 import sys
+import os
 
 
 FATAL_ERROR = "FATAL"
 WARNING = "WARNING"
 INFORMATION = "INFO"
 NON_FATAL_ERROR = "ERROR"
+OUTPUT = "OUTPUT"
 
 
 class Logger:
 
+    def __init__(self):
+        if 'LOGGING_SUPPRESSED_TYPES' in os.environ:
+            self._suppressed_types = os.environ['LOGGING_SUPPRESSED_TYPES'].split(',')
+        else:
+            self._suppressed_types = []
     _BASE_MSG = "[{}] {}: {}"
 
     def log(self, msg_type: str, msg: str) -> None:
+        if msg_type in self._suppressed_types:
+            return
         time = dt.now()
         time_str = time.isoformat()
         time_str = time_str[11:19]
