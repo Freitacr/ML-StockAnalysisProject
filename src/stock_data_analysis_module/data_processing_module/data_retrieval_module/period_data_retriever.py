@@ -31,5 +31,5 @@ class PeriodDataRetriever:
         table = stock_data_table.StockDataTable(f"{ticker}_{source}_data")
         conditional = f'where hist_date < date("{self.end_date}")'
         if max_rows > 0:
-            conditional += f' limit {max_rows}'
+            conditional += f' order by hist_date desc limit {max_rows}'
         return table.select_from_table(self.column_list, conditional=conditional)
