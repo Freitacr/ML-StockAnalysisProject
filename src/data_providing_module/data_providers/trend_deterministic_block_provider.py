@@ -2,7 +2,7 @@
 
 Guiding Principles of this implementation are available in the paper
 "Predicting stock and stock price index movement using Trend Deterministic Data
-Preparation and machine learning techniques" (2014, Pael, Shah, et al)
+Preparation and machine learning techniques" (2014, Patel, Shah, et al)
 
 As with other Data Provider implementations, this provider is not intended to be
 instantiated outside of this module. All interactions with this provider are to

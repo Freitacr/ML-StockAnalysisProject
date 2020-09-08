@@ -34,4 +34,4 @@ if __name__ == "__main__":
     ret_predictions = registry.pass_data(args[0], stop_for_errors=False)
     if predict and not export_predictions:
         for passback, predictions in ret_predictions.items():
-            logger.logger.log(logger.INFORMATION, predictions)
+            logger.logger.log(logger.OUTPUT, predictions)

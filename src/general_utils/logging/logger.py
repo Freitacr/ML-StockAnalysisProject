@@ -27,7 +27,7 @@ class Logger:
         time_str = time_str[11:19]
         msg_out = self._BASE_MSG.format(msg_type, time_str, msg)
         dest_stream = sys.stderr
-        if msg_type == INFORMATION:
+        if msg_type in [INFORMATION, OUTPUT]:
             dest_stream = sys.stdout
         print(msg_out, file=dest_stream)
 

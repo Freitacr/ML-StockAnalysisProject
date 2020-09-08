@@ -20,4 +20,5 @@ class ConfigurableRegistry:
         for _, configurable in self._configurables.items():
             configurable.load_configuration(parser)
 
+
 config_registry = ConfigurableRegistry()

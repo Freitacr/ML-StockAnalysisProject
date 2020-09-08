@@ -167,7 +167,7 @@ class RandomForestManager(data_provider_registry.DataConsumerBase):
         out_dir = output_dir + path.sep + 'random_forest_models'
         if not path.exists(out_dir):
             os.mkdir(out_dir)
-        _, max_processes = config_parser_singleton.read_execution_options()
+        _, max_processes, _ = config_parser_singleton.read_execution_options()
         max_processes = multiprocessing.cpu_count() if max_processes == -1 else max_processes
         with multiprocessing.Pool(max_processes) as pool:
             tasks = []
