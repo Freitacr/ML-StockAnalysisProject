@@ -70,7 +70,7 @@ class YahooDataFormatting(data_formatting.DataFormatter):
         self.stock_list_table = None
         data_formatting.registry.formatter_registry.add(self)
 
-    def _obtain_data(self, already_stored_dates):
+    def _obtain_data(self, already_stored_dates, final_date: str = None):
         '''Attempts to obtain data for all tickers in self.ticker_list
         @param already_stored_dates: Dictionary mapping the upper cased ticker to a set of timestamps that already
             have data in the database.
@@ -86,11 +86,11 @@ class YahooDataFormatting(data_formatting.DataFormatter):
             download_tickers.append(ticker)
 
         data = []
-        temp_data, errored = self.data_downloader.getHistoricalData(download_tickers)
+        temp_data, errored = self.data_downloader.getHistoricalData(download_tickers, final_date=final_date)
         data.extend(temp_data)
-        temp_data, errored = self.data_downloader.getHistoricalData(errored)
+        temp_data, errored = self.data_downloader.getHistoricalData(errored, final_date=final_date)
         data.extend(temp_data)
-        temp_data, errored = self.data_downloader.getHistoricalData(errored)
+        temp_data, errored = self.data_downloader.getHistoricalData(errored, final_date=final_date)
         data.extend(temp_data)
 
         for data_ticker in data:
@@ -109,7 +109,8 @@ class YahooDataFormatting(data_formatting.DataFormatter):
             ret.append(ticker_ret)
         return ret
     
-    def get_data(self, ticker_list: List[str]) -> Tuple[str, List[data_formatting.TickerFormattedData]]:
+    def get_data(self, ticker_list: List[str], final_date = None
+                 ) -> Tuple[str, List[data_formatting.TickerFormattedData]]:
         # Initialization moved here as class may be instanced and not used for a current download
         self.data_downloader = DownloaderYahoo() if self.data_downloader is None else self.data_downloader
         self.stock_list_table = stock_list_table.StockListTable() \
@@ -122,7 +123,7 @@ class YahooDataFormatting(data_formatting.DataFormatter):
         for ticker, stored in stored_tickers:
             stored_ticker_dict[ticker] = stored
         down_days = _generate_stored_day_timestamps(stored_ticker_dict, ticker_list)
-        return 'yahoo', self._obtain_data(down_days)
+        return 'yahoo', self._obtain_data(down_days, final_date)
 
 
 formatter = YahooDataFormatting()

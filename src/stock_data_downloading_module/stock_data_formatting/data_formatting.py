@@ -24,19 +24,19 @@ class DataFormatterRegistry:
         '''
         self.formatter_registry: Set[DataFormatter] = set()
 
-    def get_data(self, ticker_list) -> List[Tuple[str, Iterable[TickerFormattedData]]]:
+    def get_data(self, ticker_list, final_date: str = None) -> List[Tuple[str, Iterable[TickerFormattedData]]]:
         '''Obtain and format data on all tickers from self.ticker_list
         '''
         ret_data = []
         for formatter in self.formatter_registry:
-            ret_data.append(formatter.get_data(ticker_list))
+            ret_data.append(formatter.get_data(ticker_list, final_date=final_date))
         return ret_data
 
 
 class DataFormatter(abc.ABC):
 
     @abc.abstractmethod
-    def get_data(self, ticker_list: List[str]) -> Tuple[str, Iterable[TickerFormattedData]]:
+    def get_data(self, ticker_list: List[str], final_date=None) -> Tuple[str, Iterable[TickerFormattedData]]:
         pass
 
 

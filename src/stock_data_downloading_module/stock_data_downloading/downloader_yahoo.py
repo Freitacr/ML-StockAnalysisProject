@@ -29,9 +29,9 @@ class DownloaderYahoo:
             logger.logger.log(logger.FATAL_ERROR, "Exiting as continuation is impossible")
             exit(1)
         
-    def getHistoricalData(self, ticker_list, max_number_of_days = -1, start_date = None):
+    def getHistoricalData(self, ticker_list, max_number_of_days = -1, final_date = None):
         '''Obtains the entirety of the historical data fore each of the stocks that is possible
-        @param start_date: datetime.datetime object matching the final day in the period
+        @param final_date: datetime.datetime object matching the final day in the period
             stock data should be obtained for. If this is None, the current day will be used
         @param max_number_of_days: number representing the maximum amount of days BEFORE start_date
             stock data should be obtained for. I.E. a value of 5 will result in stock data 
@@ -40,7 +40,7 @@ class DownloaderYahoo:
         errored = []
         data = []
         for ticker in ticker_list:
-            ret = self.__getDataForTicker(ticker, max_number_of_days, start_date)
+            ret = self.__getDataForTicker(ticker, max_number_of_days, final_date)
             if ret[0]:
                 data.append([ticker, ret[1]])
             else:
@@ -48,11 +48,11 @@ class DownloaderYahoo:
         
         return [data, errored]
     
-    def __getDataForTicker(self, ticker, max_number_of_days, start_date):
+    def __getDataForTicker(self, ticker, max_number_of_days, final_date):
         '''Obtain historical data for the ticker
         @param ticker: Ticker to obtain data for
         @param max_number_of_days: maximum number of days before start_date to obtain data for
-        @param start_date: The final day to obtain data for
+        @param final_date: The final day to obtain data for
         Obtains the historical data for the ticker, using the cookie manager to manage the HTTP request, and
         handling the URL construction required to fit into Yahoo!'s downloading scheme. 
         '''
@@ -60,18 +60,18 @@ class DownloaderYahoo:
         period1 = None
         
         # Convert the value of start_date into the number of seconds since the Epoch (Jan 1, 1970 at midnight)
-        if start_date == None:
-            start_date = datetime.now()
-            period2 = round(start_date.timestamp())
+        if final_date == None:
+            final_date = datetime.now()
+            period2 = round(final_date.timestamp())
         else:
-            period2 = round(start_date.timestamp())
+            period2 = round(final_date.timestamp())
         
         # Use start_date and max_number_of_days to calculate the lower bound of the data retrieval period
         # (in the number of seconds since the Epoch)
         if max_number_of_days == -1:
             period1 = 0
         else:
-            period1 = round((start_date - timedelta(days = max_number_of_days)).timestamp())
+            period1 = round((final_date - timedelta(days = max_number_of_days)).timestamp())
 
         # Setup full download URL from the base
         download_url = self.__urlBase.format(ticker.upper(), period1, period2, self.cookie_man.getCrumb()[1:])

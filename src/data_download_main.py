@@ -4,8 +4,9 @@ Created on Dec 19, 2017
 @author: Colton Freitas
 '''
 from datetime import datetime as dt
-import os
 import importlib
+import os
+import sys
 
 from general_utils.mysql_management.mysql_tables import stock_data_table, stock_list_table
 from general_utils.logging import logger
@@ -66,8 +67,16 @@ if __name__ == '__main__':
             continue
         importlib.import_module('stock_data_downloading_module.stock_data_formatters.' + provider.replace('.py', ''))
 
+    # This date is exclusive.
+    args = sys.argv[1:]
+    if args:
+        final_date = args[0]
+        final_date = dt.strptime(final_date, "%d/%m/%y")
+    else:
+        final_date = None
+
     data_formatter = data_formatting.registry
-    data = data_formatter.get_data(stock_list)
+    data = data_formatter.get_data(stock_list, final_date)
 
     for data_source in data:
         source_string, source_data = data_source
