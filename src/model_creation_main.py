@@ -3,16 +3,10 @@ import importlib
 from data_providing_module import configurable_registry
 from data_providing_module.data_provider_registry import registry
 from general_utils.config.config_parser_singleton import parser, update_config, read_execution_options
+from general_utils.exportation import csv_amalgamation
 from general_utils.logging import logger
 
 # os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
-
-# suppress deprecation warnings in current thread
-from tensorflow.python.util import deprecation
-deprecation._PRINT_DEPRECATION_WARNINGS = False
-
-# suppress Tensorflow warnings and info in current thread
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 if __name__ == "__main__":
@@ -35,3 +29,5 @@ if __name__ == "__main__":
     if predict and not export_predictions:
         for passback, predictions in ret_predictions.items():
             logger.logger.log(logger.OUTPUT, predictions)
+    elif predict:
+        csv_amalgamation.amalgamate_csvs(args[0])

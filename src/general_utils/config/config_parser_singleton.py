@@ -41,6 +41,11 @@ def write_default_configs(file_position):
         EXECUTION_OPTIONS_MAX_PROCESSES_IDENTIFIER,
         '-1'
     )
+    parser.set(
+        EXECUTION_OPTIONS_SECTION_NAME,
+        EXECUTION_OPTIONS_EXPORT_PREDICTIONS_IDENTIFIER,
+        'False'
+    )
     fp = open(file_position, 'w')
     parser.write(fp)
     fp.close()
