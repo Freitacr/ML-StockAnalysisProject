@@ -68,8 +68,11 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
             ticker_data = data_retriever.retrieve_data(ticker, max_rows=padded_data_block_length)
             ticker_data = np.array(ticker_data, dtype=np.float32)
             high = ticker_data[:, 0]
+            high = np.array(list(reversed(high)))
             low = ticker_data[:, 1]
+            low = np.array(list(reversed(low)))
             close = ticker_data[:, 2]
+            close = np.array(list(reversed(close)))
             if len(high) < max_additional_period:
                 len_warning = (
                         "Could not process %s into an indicator block, "
