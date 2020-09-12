@@ -94,7 +94,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         combined_x[i] = examples
 
     y = ['Trend Upward' if np.argmax(y[i]) == 1 else "Trend Downward" for i in range(len(y))]
-    y = np.array(y[-66:])
+    y = np.array(y[-264:])
     try:
         with open(model_path, 'rb') as open_file:
             model: naive_bayes.GaussianNB = pickle.load(open_file)
@@ -102,7 +102,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
                                                   f"Skipping prediction generation for this stock")
         return None
-    generated_predictions = model.predict(combined_x[-67:])
+    generated_predictions = model.predict(combined_x[-265:])
     correct_predictions = 0
     for i in range(len(y)):
         if generated_predictions[i] == y[i]:

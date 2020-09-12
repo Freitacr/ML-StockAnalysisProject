@@ -2,11 +2,12 @@
 
 """
 from configparser import ConfigParser, SectionProxy
-from os import path
-import os
 import math
 import multiprocessing
-from typing import List, Union, Dict, Tuple
+import operator
+from os import path
+import os
+from typing import List, Union, Dict, Tuple, Any
 
 from sklearn import ensemble
 import numpy as np
@@ -33,10 +34,15 @@ _CONFIGURABLE_IDENTIFIERS = [_ENABLED_CONFIG_IDENTIFIER, _EXAMPLE_COMBINATION_FA
 _CONFIG_DEFAULTS = ['False', '1', 'False', '2520']
 
 
+def _insert_into_best_model_array(best_model_array: List[Tuple[Any, float]], model, accuracy):
+    best_model_array.append((model, accuracy))
+    best_model_array.sort(key=operator.itemgetter(1))
+    return best_model_array[1:]
+
+
 def create_random_forest(input_data, target_data, val_input_data, val_target_data
-                         ) -> ensemble.RandomForestClassifier:
-    highest_accuracy_model = None
-    highest_val_accuracy = 0.0
+                         ) -> List[ensemble.RandomForestClassifier]:
+    highest_accuracy_models: List[Tuple[Any, float]] = [(None, 0), (None, 0), (None, 0)]
     criterion = ['gini', 'entropy']
     for split_criterion in criterion:
         for i in range(2, 11):
@@ -48,14 +54,8 @@ def create_random_forest(input_data, target_data, val_input_data, val_target_dat
                                                         max_samples=samples, criterion=split_criterion)
                 model.fit(input_data, target_data)
                 accuracy = test_forest_accuracy(val_input_data, val_target_data, model)
-                if accuracy >= highest_val_accuracy:
-                    highest_accuracy_model = model
-                    if accuracy != highest_val_accuracy:
-                        logger.logger.log(logger.INFORMATION, f"Best accuracy of {accuracy} was achieved"
-                                                              f" with parameters [{forest_size}, min_samples={i},"
-                                                              f" max_samples = {j/divisive_factor}, {split_criterion}]")
-                    highest_val_accuracy = accuracy
-    return highest_accuracy_model
+                highest_accuracy_models = _insert_into_best_model_array(highest_accuracy_models, model, accuracy)
+    return [x[0] for x in highest_accuracy_models]
 
 
 def test_forest_accuracy(val_input_data, val_target_data, model) -> float:
@@ -68,9 +68,7 @@ def test_forest_accuracy(val_input_data, val_target_data, model) -> float:
 
 
 def handle_model_creation(ticker, training_data, out_dir, overwrite_model, combined_examples=1):
-    model_file_path = out_dir + f"{path.sep}{ticker}.randomforest"
-    if path.exists(model_file_path) and not overwrite_model:
-        return
+    model_file_path = out_dir + f"{path.sep}{ticker}" + "_{0}.randomforest"
     x, y = training_data
     x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
@@ -87,18 +85,24 @@ def handle_model_creation(ticker, training_data, out_dir, overwrite_model, combi
     valid_y = y[-validation_examples:]
     y = y[:validation_examples]
     combined_x = combined_x[:validation_examples]
-    model = create_random_forest(combined_x, y, valid_x, valid_y)
-    model_accuracy = test_forest_accuracy(valid_x, valid_y, model)
-    model_training_accuracy = test_forest_accuracy(combined_x, y, model)
-    logger.logger.log(logger.INFORMATION, f"Writing model to {model_file_path}")
-    with open(model_file_path, 'wb') as open_file:
-        pickle.dump(model, open_file)
-    with open(model_file_path.replace('.randomforest', '.training_info'), 'w') as open_file:
-        open_file.write(f"{model_accuracy} {model_training_accuracy}")
+
+    models = create_random_forest(combined_x, y, valid_x, valid_y)
+    for i in range(len(models)):
+        fp = model_file_path.format(str(i))
+        if path.exists(fp) and not overwrite_model:
+            continue
+        model = models[i]
+        model_accuracy = test_forest_accuracy(valid_x, valid_y, model)
+        model_training_accuracy = test_forest_accuracy(combined_x, y, model)
+        logger.logger.log(logger.INFORMATION, f"Writing model to {fp}")
+        with open(fp, 'wb') as open_file:
+            pickle.dump(model, open_file)
+        with open(fp.replace('.randomforest', '.training_info'), 'w') as open_file:
+            open_file.write(f"{model_accuracy} {model_training_accuracy}")
 
 
 def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1):
-    model_path = model_dir + path.sep + f"{ticker}.randomforest"
+    model_path = model_dir + path.sep + f"{ticker}_0.randomforest"
     if not path.exists(model_path):
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
@@ -113,45 +117,60 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         combined_x[i] = examples
 
     y = [np.argmax(y[i]) for i in range(len(y))]
-    y = np.array(y[-66:])
-    try:
-        with open(model_path, 'rb') as open_file:
-            model: ensemble.RandomForestClassifier = pickle.load(open_file)
-    except pickle.UnpicklingError or FileNotFoundError:
-        logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
-                                                  f"Skipping prediction generation for this stock")
-        return None
-    generated_predictions = model.predict(combined_x[-67:])
-    correct_predictions = 0
-    for i in range(len(y)):
-        if generated_predictions[i] == y[i]:
-            correct_predictions += 1
-    accuracy = correct_predictions / len(y)
-    return ticker, generated_predictions[-1], accuracy
+    y = np.array(y[-264:])
+
+    model_files = os.listdir(model_dir)
+    model_files = [model_dir + path.sep + x for x in model_files
+                   if x.startswith(f"{ticker}_") and x.endswith('.randomforest')]
+    predictions = []
+    accuracies = []
+    for model_path in model_files:
+        try:
+            with open(model_path, 'rb') as open_file:
+                model: ensemble.RandomForestClassifier = pickle.load(open_file)
+        except pickle.UnpicklingError or FileNotFoundError:
+            logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
+                                                      f"Skipping prediction generation for this stock")
+            return None
+        generated_predictions = model.predict(combined_x[-265:])
+        correct_predictions = 0
+        for i in range(len(y)):
+            if generated_predictions[i] == y[i]:
+                correct_predictions += 1
+        accuracy = correct_predictions / len(y)
+        accuracies.append(accuracy)
+        predictions.append(generated_predictions[-1])
+    return ticker, predictions, accuracies
 
 
 def string_serialize_predictions(predictions) -> str:
     ret_str = ""
     for ticker, prediction_data in predictions.items():
-        actual_prediction, observed_accuracy = prediction_data
-        if actual_prediction == 1:
-            prediction_str = "Trend Upward"
-        else:
-            prediction_str = "Trend Downward"
-        ret_str += (f"Predictions for {ticker}\n"
-                    f"{prediction_str} was theorized with an observed accuracy of {observed_accuracy}\n")
+        ret_str += f"Predictions for {ticker}\n"
+        actual_predictions, observed_accuracies = prediction_data
+        for i in range(len(actual_predictions)):
+            actual_prediction = actual_predictions[i]
+            observed_accuracy = observed_accuracies[i]
+            if actual_prediction == 1:
+                prediction_str = "Trend Upward"
+            else:
+                prediction_str = "Trend Downward"
+            ret_str += f"{prediction_str} was theorized with an observed accuracy of {observed_accuracy}\n"
     return ret_str
 
 
 def export_predictions(predictions, output_dir) -> None:
     exportation_columns = []
     for ticker, prediction_data in predictions.items():
-        actual_prediction, observed_accuracy = prediction_data
-        if actual_prediction == 1:
-            prediction_str = "Trend Upward"
-        else:
-            prediction_str = "Trend Downward"
-        exportation_columns.append((ticker, prediction_str, observed_accuracy))
+        actual_predictions, observed_accuracies = prediction_data
+        for i in range(len(actual_predictions)):
+            actual_prediction = actual_predictions[i]
+            observed_accuracy = observed_accuracies[i]
+            if actual_prediction == 1:
+                prediction_str = "Trend Upward"
+            else:
+                prediction_str = "Trend Downward"
+            exportation_columns.append((ticker, prediction_str, observed_accuracy))
     csv_exportation.export_predictions(exportation_columns, output_dir + path.sep + 'random_forest.csv')
 
 
@@ -186,8 +205,12 @@ class RandomForestManager(data_provider_registry.DataConsumerBase):
                                     "SVM Manager's Enabled config to True to create models.")
         predictions = {}
         for ticker, prediction_data in data.items():
-            ticker, actual_prediction, accuracy = predict_using_models(ticker, model_dir, prediction_data,
-                                                                       combined_examples=self._periods_per_example)
+            prediction_tuple = predict_using_models(ticker, model_dir, prediction_data,
+                                                    combined_examples=self._periods_per_example)
+            if prediction_tuple is not None:
+                ticker, actual_prediction, accuracy = prediction_tuple
+            else:
+                continue
             predictions[ticker] = (actual_prediction, accuracy)
         return predictions
 

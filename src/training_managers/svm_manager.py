@@ -2,11 +2,12 @@
 
 """
 from configparser import ConfigParser, SectionProxy
+import operator
 from os import path
 import os
 import math
 import multiprocessing
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Tuple, Any
 
 from sklearn import svm
 import numpy as np
@@ -33,49 +34,39 @@ _CONFIGURABLE_IDENTIFIERS = [_ENABLED_CONFIGURATION_IDENTIFIER, _OVERWRITE_EXIST
 _CONFIGURATION_DEFAULTS = ['False', 'False', '22', '2520']
 
 
+def _insert_into_best_model_array(best_model_array: List[Tuple[Any, float]], model, accuracy):
+    best_model_array.append((model, accuracy))
+    best_model_array.sort(key=operator.itemgetter(1))
+    return best_model_array[1:]
+
+
 def create_svm(input_data, target_data: Union[np.ndarray, List[str]],
                val_input_data: np.ndarray,
-               val_target_data: Union[np.ndarray, List[str]]) -> svm.SVC:
-    highest_accuracy_model = None
-    highest_accuracy = 0.0
+               val_target_data: Union[np.ndarray, List[str]]) -> List[svm.SVC]:
+    best_models: List[Tuple[Any, float]] = [(None, 0), (None, 0), (None, 0)]
+    divisive_factor = 100
     for j in range(1, 5):
-        for i in range(1, 1000):
-            curr_svm = svm.SVC(kernel='poly', C=i / 1000, degree=j, tol=1e-2)
+        for i in range(1, divisive_factor):
+            curr_svm = svm.SVC(kernel='poly', C=i / divisive_factor, degree=j, tol=1e-2)
             curr_svm.fit(input_data, target_data)
             accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-            if accuracy > highest_accuracy:
-                highest_accuracy_model = curr_svm
-                highest_accuracy = accuracy
-                logger.logger.log(logger.INFORMATION, f"Best accuracy of {highest_accuracy} was achieved"
-                                                      f"with parameters [poly, C={i/1000}, degree={j}, tol=1e-2")
-    for i in range(1, 1000):
-        curr_svm = svm.SVC(kernel='rbf', C=i / 1000, tol=1e-2)
+            best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
+    for i in range(1, divisive_factor):
+        curr_svm = svm.SVC(kernel='rbf', C=i / divisive_factor, tol=1e-2)
         curr_svm.fit(input_data, target_data)
         accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-        if accuracy > highest_accuracy:
-            highest_accuracy_model = curr_svm
-            highest_accuracy = accuracy
-            logger.logger.log(logger.INFORMATION, f"Best accuracy of {highest_accuracy} was achieved"
-                                                  f"with parameters [rbf, C={i / 1000}, tol=1e-2")
-    for i in range(1, 1000):
-        curr_svm = svm.SVC(kernel='sigmoid', C=i / 1000, tol=1e-2)
+        best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
+    for i in range(1, divisive_factor):
+        curr_svm = svm.SVC(kernel='sigmoid', C=i / divisive_factor, tol=1e-2)
         curr_svm.fit(input_data, target_data)
         accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-        if accuracy > highest_accuracy:
-            highest_accuracy_model = curr_svm
-            highest_accuracy = accuracy
-            logger.logger.log(logger.INFORMATION, f"Best accuracy of {highest_accuracy} was achieved"
-                                                  f"with parameters [sigmoid, C={i / 1000}, tol=1e-2")
-    for i in range(1, 1000):
-        curr_svm = svm.SVC(kernel='linear', C=i / 1000, tol=1e-2)
+        best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
+    for i in range(1, divisive_factor):
+        curr_svm = svm.SVC(kernel='linear', C=i / divisive_factor, tol=1e-2)
         curr_svm.fit(input_data, target_data)
         accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-        if accuracy > highest_accuracy:
-            highest_accuracy_model = curr_svm
-            highest_accuracy = accuracy
-            logger.logger.log(logger.INFORMATION, f"Best accuracy of {highest_accuracy} was achieved"
-                                                  f"with parameters [linear, C={i / 1000}, tol=1e-2")
-    return highest_accuracy_model
+        best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
+    return [x[0] for x in best_models]
 
 
 def test_svm_accuracy(
@@ -91,9 +82,7 @@ def test_svm_accuracy(
 
 
 def handle_data(ticker, training_data, out_dir, overwrite_model, combined_examples=22):
-    model_file_path = out_dir + f"{path.sep}{ticker}.svm"
-    if path.exists(model_file_path) and not overwrite_model:
-        return
+    model_file_path = out_dir + f"{path.sep}{ticker}" + "_{0}.svm"
     x, y = training_data
     x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
@@ -110,18 +99,23 @@ def handle_data(ticker, training_data, out_dir, overwrite_model, combined_exampl
     valid_y = y[-validation_examples:]
     y = y[:validation_examples]
     combined_x = combined_x[:validation_examples]
-    model = create_svm(combined_x, y, valid_x, valid_y)
-    model_accuracy = test_svm_accuracy(valid_x, valid_y, model)
-    model_training_accuracy = test_svm_accuracy(combined_x, y, model)
-    logger.logger.log(logger.INFORMATION, f"Writing model to {model_file_path}")
-    with open(model_file_path, 'wb') as open_file:
-        pickle.dump(model, open_file)
-    with open(model_file_path.replace('.svm', '.training_info'), 'w') as open_file:
-        open_file.write(f"{model_accuracy} {model_training_accuracy}")
+    models = create_svm(combined_x, y, valid_x, valid_y)
+    for i in range(len(models)):
+        fp = model_file_path.format(str(i))
+        if path.exists(fp) and not overwrite_model:
+            continue
+        model = models[i]
+        model_accuracy = test_svm_accuracy(valid_x, valid_y, model)
+        model_training_accuracy = test_svm_accuracy(combined_x, y, model)
+        logger.logger.log(logger.OUTPUT, f"Writing model to {fp}")
+        with open(fp, 'wb') as open_file:
+            pickle.dump(model, open_file)
+        with open(fp.replace('.svm', '.training_info'), 'w') as open_file:
+            open_file.write(f"{model_accuracy} {model_training_accuracy}")
 
 
 def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
-    model_path = model_dir + path.sep + f"{ticker}.svm"
+    model_path = model_dir + path.sep + f"{ticker}_0.svm"
     if not path.exists(model_path):
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
@@ -136,37 +130,51 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
         combined_x[i] = examples
 
     y = ['Trend Upward' if np.argmax(y[i]) == 1 else "Trend Downward" for i in range(len(y))]
-    y = np.array(y[-66:])
-    try:
-        with open(model_path, 'rb') as open_file:
-            model: svm.SVC = pickle.load(open_file)
-    except pickle.UnpicklingError or FileNotFoundError:
-        logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
-                                                  f"Skipping prediction generation for this stock")
-        return None
-    generated_predictions = model.predict(combined_x[-67:])
-    correct_predictions = 0
-    for i in range(len(y)):
-        if generated_predictions[i] == y[i]:
-            correct_predictions += 1
-    accuracy = correct_predictions / len(y)
-    return ticker, generated_predictions[-1], accuracy
+    y = np.array(y[-264:])
+
+    model_files = os.listdir(model_dir)
+    model_files = [model_dir + path.sep + x for x in model_files if x.startswith(f"{ticker}_") and x.endswith('.svm')]
+    predictions = []
+    accuracies = []
+    for model_path in model_files:
+        try:
+            with open(model_path, 'rb') as open_file:
+                model: svm.SVC = pickle.load(open_file)
+        except pickle.UnpicklingError or FileNotFoundError:
+            logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
+                                                      f"Skipping prediction generation for this model")
+            continue
+        generated_predictions = model.predict(combined_x[-265:])
+        correct_predictions = 0
+        for i in range(len(y)):
+            if generated_predictions[i] == y[i]:
+                correct_predictions += 1
+        accuracy = correct_predictions / len(y)
+        accuracies.append(accuracy)
+        predictions.append(generated_predictions[-1])
+    return ticker, predictions, accuracies
 
 
-def string_serialize_predictions(predictions: Dict[str, Tuple[str, float]]) -> str:
+def string_serialize_predictions(predictions: Dict[str, Tuple[List[str], List[float]]]) -> str:
     ret_str = ""
     for ticker, prediction_data in predictions.items():
-        actual_prediction, observed_accuracy = prediction_data
-        ret_str += (f"Predictions for {ticker}\n"
-                    f"{actual_prediction} was theorized with an observed accuracy of {observed_accuracy}\n")
+        actual_predictions, observed_accuracies = prediction_data
+        ret_str += f"Predictions for {ticker}\n"
+        for i in range(len(actual_predictions)):
+            actual_prediction = actual_predictions[i]
+            observed_accuracy = observed_accuracies[i]
+            ret_str += f"{actual_prediction} was theorized with an observed accuracy of {observed_accuracy}\n"
     return ret_str
 
 
 def export_predictions(predictions, output_dir) -> None:
     exportation_columns = []
     for ticker, prediction_data in predictions.items():
-        actual_prediction, observed_accuracy = prediction_data
-        exportation_columns.append((ticker, actual_prediction, observed_accuracy))
+        actual_predictions, observed_accuracies = prediction_data
+        for i in range(len(actual_predictions)):
+            actual_prediction = actual_predictions[i]
+            observed_accuracy = observed_accuracies[i]
+            exportation_columns.append((ticker, actual_prediction, observed_accuracy))
     csv_exportation.export_predictions(exportation_columns, output_dir + path.sep + 'svm.csv')
 
 
@@ -182,8 +190,18 @@ class SvmManager(data_provider_registry.DataConsumerBase):
         out_dir = output_dir + path.sep + 'svm_models'
         if not path.exists(out_dir):
             os.mkdir(out_dir)
-        for ticker, training_data in tqdm.tqdm(data.items()):
-            handle_data(ticker, training_data, out_dir, self._overwrite_existing, self._combined_examples_factor)
+        exec_options = config_parser_singleton.read_execution_options()
+        max_processes = exec_options[1]
+        max_processes = multiprocessing.cpu_count() if max_processes == -1 else max_processes
+        with multiprocessing.Pool(max_processes) as pool:
+            open_jobs = []
+            for ticker, training_data in data.items():
+                job = pool.apply_async(handle_data,
+                                       [ticker, training_data, out_dir, self._overwrite_existing],
+                                       {'combined_examples': self._combined_examples_factor})
+                open_jobs.append(job)
+            for job in tqdm.tqdm(open_jobs):
+                job.get()
 
     def predict_data(self, data, passback, in_model_dir):
         model_dir = in_model_dir + path.sep + 'svm_models'
@@ -193,8 +211,12 @@ class SvmManager(data_provider_registry.DataConsumerBase):
                                     "SVM Manager's Enabled config to True to create models.")
         predictions = {}
         for ticker, prediction_data in data.items():
-            ticker, actual_prediction, accuracy = predict_data(ticker, model_dir, prediction_data,
-                                                               combined_examples=self._combined_examples_factor)
+            prediction_tuple = predict_data(ticker, model_dir, prediction_data,
+                                            combined_examples=self._combined_examples_factor)
+            if prediction_tuple is not None:
+                ticker, actual_prediction, accuracy = prediction_tuple
+            else:
+                continue
             predictions[ticker] = (actual_prediction, accuracy)
         return predictions
 

@@ -38,27 +38,30 @@ _CONFIGURATION_DEFAULTS = ['False', 'False', '1', '2520']
 
 @_testing.ignore_warnings(category=exceptions.ConvergenceWarning)
 def _create_poly_svm(input_data, target_data, val_input_data, val_target_data,
-                     degree_range: slice, c_divisive_factor: int = 1000):
+                     degree_range: slice, c_divisive_factor: int = 10, gamma_divisive_factor: int = 10000):
     least_average_error = comparison_placeholder.ComparisonPlaceholder()
     least_error_model = None
     for j in range(degree_range.start, degree_range.stop):
         for i in range(1, c_divisive_factor):
-            curr_svm = svm.SVR(kernel='poly', degree=j, C=i/c_divisive_factor, max_iter=1000)
-            curr_svm.fit(input_data, target_data)
-            average_error, error_stdev = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-            average_error += error_stdev
-            if average_error < least_average_error:
-                least_error_model = curr_svm
-                least_average_error = average_error
-                logger.logger.log(logger.INFORMATION, f"Least error of {least_average_error} "
-                                                      f"was achieved with parameters "
-                                                      f"[poly, C={i/1000}, degree={j}, tol=1e-2]")
+            for k in range(1, gamma_divisive_factor):
+                curr_svm = svm.SVR(kernel='poly', degree=j, C=i/c_divisive_factor,
+                                   max_iter=1000, gamma=k/1000)
+                curr_svm.fit(input_data, target_data)
+                average_error, error_stdev = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
+                average_error += error_stdev
+                if average_error < least_average_error:
+                    least_error_model = curr_svm
+                    least_average_error = average_error
+                    logger.logger.log(logger.INFORMATION, f"Parameters "
+                                                          f"[poly, C={i/c_divisive_factor}, degree={j}, tol=1e-3,"
+                                                          f"gamma={k/1000}]. "
+                                                          f"Error, stdev: [{average_error}, {error_stdev}]")
     return least_error_model, least_average_error
 
 
 @_testing.ignore_warnings(category=exceptions.ConvergenceWarning)
 def _create_non_poly_svm(input_data, target_data, val_input_data, val_target_data,
-                         kernel: str, c_divisive_factor: int = 1000):
+                         kernel: str, c_divisive_factor: int = 1000, gamma_divisive_factor: int = 500):
     least_average_error = comparison_placeholder.ComparisonPlaceholder()
     least_error_model = None
     for i in range(1, c_divisive_factor):
@@ -90,7 +93,7 @@ def create_svm(input_data: np.ndarray, target_data: np.ndarray,
     _remove_inf_and_nan(val_input_data)
 
     least_error_model, least_average_error = _create_poly_svm(
-        input_data, target_data, val_input_data, val_target_data, slice(1, 5), c_divisive_factor=1000
+        input_data, target_data, val_input_data, val_target_data, slice(1, 2), c_divisive_factor=10
     )
 
     kernels = ["rbf", 'sigmoid', 'linear']

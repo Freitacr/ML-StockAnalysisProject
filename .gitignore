@@ -6,7 +6,7 @@
 models
 
 configuration/*.ini
-configuration/*txt
+configuration/stock_list.txt
 model_data/
 
 # Visual Studio Code Configuration directory
