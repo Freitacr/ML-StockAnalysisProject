@@ -137,8 +137,8 @@ def handle_data(ticker, training_data, out_dir, overwrite_model, combined_exampl
     validation_examples = math.floor(validation_split * len(combined_x))
     valid_x = combined_x[-validation_examples:]
     valid_y = y[-validation_examples:]
-    y = y[:validation_examples]
-    combined_x = combined_x[:validation_examples]
+    y = y[:-validation_examples]
+    combined_x = combined_x[:-validation_examples]
     model = create_svm(combined_x, y, valid_x, valid_y)
     model_mean_err, model_stdev_err = test_svm_accuracy(valid_x, valid_y, model)
     model_mean_err_training, model_stdev_err_training = test_svm_accuracy(combined_x, y, model)
