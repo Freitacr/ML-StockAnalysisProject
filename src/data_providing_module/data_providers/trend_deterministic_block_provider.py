@@ -75,7 +75,7 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
             close = ticker_data[:, 2]
             close = np.array(list(reversed(close)), dtype=np.float32)
             hist_dates = np.array(list(reversed(ticker_data[:, 3])))
-            if len(high) < max_additional_period:
+            if len(high) <= max_additional_period:
                 len_warning = (
                         "Could not process %s into an indicator block, "
                         "needed %d days of trading data but received %d" %
@@ -85,7 +85,7 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
                 continue
 
             if not kwargs['trend_strength_labelling']:
-                actual_trends = [[0, 1] if close[i] <= close[i + 1] else [1, 0] for i in range(len(close) - 1)]
+                actual_trends = [[0, 1] if close[i] < close[i + 1] else [1, 0] for i in range(len(close) - 1)]
             else:
                 actual_trends = []
                 for i in range(len(close)-1):
@@ -101,7 +101,7 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
                     else:
                         actual_trends.append([1, 0, 0, 0, 0])
 
-            trend_dates = hist_dates[-len(actual_trends):]
+            trend_dates = [hist_dates[i+1] for i in range(len(close) - 1)]
 
             trend_lookahead = kwargs['trend_lookahead']
             # trend_lookahead += 1
@@ -196,6 +196,7 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
             else:
                 ret_blocks[ticker] = (stock_data_block, np.array(actual_trends[trend_lookahead:]),
                                       data_block_dates, trend_dates)
+            print()
         return ret_blocks
 
     def generate_data(self, *args, **kwargs):
