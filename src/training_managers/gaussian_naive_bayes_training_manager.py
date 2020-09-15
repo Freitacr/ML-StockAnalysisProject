@@ -52,7 +52,7 @@ def handle_bayesian_model_creation(ticker, training_data, out_dir, overwrite_mod
     model_file_path = out_dir + f"{path.sep}{ticker}.gnb"
     if path.exists(model_file_path) and not overwrite_model:
         return
-    x, y = training_data
+    x, y, _, _ = training_data
     x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
@@ -62,12 +62,13 @@ def handle_bayesian_model_creation(ticker, training_data, out_dir, overwrite_mod
 
     y = ['Trend Upward' if np.argmax(y[i]) == 1 else "Trend Downward" for i in range(len(y))]
 
-    validation_split = .2
+    validation_split = .1
+
     validation_examples = math.floor(validation_split * len(combined_x))
     valid_x = combined_x[-validation_examples:]
     valid_y = y[-validation_examples:]
-    y = y[:validation_examples]
-    combined_x = combined_x[:validation_examples]
+    y = y[:-validation_examples]
+    combined_x = combined_x[:-validation_examples]
     model = create_naive_bayes_model(combined_x, y)
     model_accuracy = test_naive_bayes(valid_x, valid_y, model)
     model_training_accuracy = test_naive_bayes(combined_x, y, model)
@@ -84,7 +85,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
         return None
-    x, y = prediction_data
+    x, y, _, _ = prediction_data
     x = x.T
 
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
@@ -94,7 +95,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         combined_x[i] = examples
 
     y = ['Trend Upward' if np.argmax(y[i]) == 1 else "Trend Downward" for i in range(len(y))]
-    y = np.array(y[-264:])
+    y = np.array(y[-132:])
     try:
         with open(model_path, 'rb') as open_file:
             model: naive_bayes.GaussianNB = pickle.load(open_file)
@@ -102,7 +103,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
                                                   f"Skipping prediction generation for this stock")
         return None
-    generated_predictions = model.predict(combined_x[-265:])
+    generated_predictions = model.predict(combined_x[-133:])
     correct_predictions = 0
     for i in range(len(y)):
         if generated_predictions[i] == y[i]:
@@ -174,7 +175,8 @@ class GNBTrainingManager(data_provider_registry.DataConsumerBase):
                 [block_length],
                 data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
                 prediction_string_serializer=string_serialize_predictions,
-                data_exportation_function=export_predictions
+                data_exportation_function=export_predictions,
+                keyword_args={'ema_period': [10, 15, 20]}
             )
 
     def write_default_configuration(self, section: "SectionProxy"):

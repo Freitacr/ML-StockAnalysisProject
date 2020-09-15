@@ -60,19 +60,21 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
                 stock_data_table.HIGH_PRICE_COLUMN_NAME,
                 stock_data_table.LOW_PRICE_COLUMN_NAME,
                 stock_data_table.CLOSING_PRICE_COLUMN_NAME,
+                stock_data_table.HISTORICAL_DATE_COLUMN_NAME
             ],
             end_date
         )
         ret_blocks = {}
         for ticker, _ in data_retriever.data_sources.items():
             ticker_data = data_retriever.retrieve_data(ticker, max_rows=padded_data_block_length)
-            ticker_data = np.array(ticker_data, dtype=np.float32)
+            ticker_data = np.array(ticker_data)
             high = ticker_data[:, 0]
-            high = np.array(list(reversed(high)))
+            high = np.array(list(reversed(high)), dtype=np.float32)
             low = ticker_data[:, 1]
-            low = np.array(list(reversed(low)))
+            low = np.array(list(reversed(low)), dtype=np.float32)
             close = ticker_data[:, 2]
-            close = np.array(list(reversed(close)))
+            close = np.array(list(reversed(close)), dtype=np.float32)
+            hist_dates = np.array(list(reversed(ticker_data[:, 3])))
             if len(high) < max_additional_period:
                 len_warning = (
                         "Could not process %s into an indicator block, "
@@ -99,13 +101,18 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
                     else:
                         actual_trends.append([1, 0, 0, 0, 0])
 
+            trend_dates = hist_dates[-len(actual_trends):]
+
             trend_lookahead = kwargs['trend_lookahead']
-            data_block_slice = slice(-data_block_length-trend_lookahead, -trend_lookahead)
+            # trend_lookahead += 1
+            data_block_slice = slice(-data_block_length - 1, -1)
 
             sma = moving_average.SMA(close, kwargs['sma_period'])
             for i in range(len(sma)-1):
                 sma[i] = 1 if sma[i] <= sma[i+1] else -1
             sma = sma[data_block_slice]
+
+            data_block_dates = hist_dates[-len(sma):]
 
             wma = moving_average.WMA(close, kwargs['wma_period'])
             for i in range(len(wma)-1):
@@ -177,11 +184,18 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
 
             stock_data_block = np.array(stock_data_block)
             actual_trends = actual_trends[-min_len:]
-            if 'predict' in kwargs:
-                ret_blocks[ticker] = (stock_data_block, np.array(actual_trends[trend_lookahead:]))
+
+            trend_dates = trend_dates[-min_len:]
+            data_block_dates = data_block_dates[-min_len:]
+
+            trend_dates = trend_dates[trend_lookahead:]
+            if 'predict' not in kwargs:
+                data_block_dates = data_block_dates[:-trend_lookahead]
+                ret_blocks[ticker] = (stock_data_block[:, :-trend_lookahead], np.array(actual_trends[trend_lookahead:]),
+                                      data_block_dates, trend_dates)
             else:
-                ret_blocks[ticker] = (stock_data_block[:, :-trend_lookahead],
-                                      np.array(actual_trends[trend_lookahead:]))
+                ret_blocks[ticker] = (stock_data_block, np.array(actual_trends[trend_lookahead:]),
+                                      data_block_dates, trend_dates)
         return ret_blocks
 
     def generate_data(self, *args, **kwargs):

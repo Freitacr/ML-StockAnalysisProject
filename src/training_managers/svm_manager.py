@@ -43,29 +43,15 @@ def _insert_into_best_model_array(best_model_array: List[Tuple[Any, float]], mod
 def create_svm(input_data, target_data: Union[np.ndarray, List[str]],
                val_input_data: np.ndarray,
                val_target_data: Union[np.ndarray, List[str]]) -> List[svm.SVC]:
-    best_models: List[Tuple[Any, float]] = [(None, 0), (None, 0), (None, 0)]
+    best_models: List[Tuple[Any, float]] = [(None, 0)]
     divisive_factor = 100
-    for j in range(1, 5):
-        for i in range(1, divisive_factor):
-            curr_svm = svm.SVC(kernel='poly', C=i / divisive_factor, degree=j, tol=1e-2)
+    for i in range(1, divisive_factor):
+        for k in range(1, divisive_factor//10):
+            curr_svm = svm.SVC(kernel='poly', C=i / divisive_factor, degree=1,
+                               tol=1e-3, gamma=k*5/(divisive_factor//10))
             curr_svm.fit(input_data, target_data)
             accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
             best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
-    for i in range(1, divisive_factor):
-        curr_svm = svm.SVC(kernel='rbf', C=i / divisive_factor, tol=1e-2)
-        curr_svm.fit(input_data, target_data)
-        accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-        best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
-    for i in range(1, divisive_factor):
-        curr_svm = svm.SVC(kernel='sigmoid', C=i / divisive_factor, tol=1e-2)
-        curr_svm.fit(input_data, target_data)
-        accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-        best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
-    for i in range(1, divisive_factor):
-        curr_svm = svm.SVC(kernel='linear', C=i / divisive_factor, tol=1e-2)
-        curr_svm.fit(input_data, target_data)
-        accuracy = test_svm_accuracy(val_input_data, val_target_data, curr_svm)
-        best_models = _insert_into_best_model_array(best_models, curr_svm, accuracy)
     return [x[0] for x in best_models]
 
 
@@ -83,7 +69,7 @@ def test_svm_accuracy(
 
 def handle_data(ticker, training_data, out_dir, overwrite_model, combined_examples=22):
     model_file_path = out_dir + f"{path.sep}{ticker}" + "_{0}.svm"
-    x, y = training_data
+    x, y, x_dates, y_dates = training_data
     x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
@@ -96,9 +82,13 @@ def handle_data(ticker, training_data, out_dir, overwrite_model, combined_exampl
     validation_split = .2
     validation_examples = math.floor(validation_split * len(combined_x))
     valid_x = combined_x[-validation_examples:]
+    valid_x_dates = x_dates[-validation_examples:]
     valid_y = y[-validation_examples:]
-    y = y[:validation_examples]
-    combined_x = combined_x[:validation_examples]
+    valid_y_dates = y_dates[-validation_examples:]
+    y = y[:-validation_examples]
+    y_dates = y_dates[:-validation_examples]
+    combined_x = combined_x[:-validation_examples]
+    x_dates = x_dates[:-validation_examples]
     models = create_svm(combined_x, y, valid_x, valid_y)
     for i in range(len(models)):
         fp = model_file_path.format(str(i))
@@ -120,7 +110,7 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
         return None
-    x, y = prediction_data
+    x, y, x_dates, y_dates = prediction_data
     x = x.T
 
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
@@ -130,7 +120,8 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
         combined_x[i] = examples
 
     y = ['Trend Upward' if np.argmax(y[i]) == 1 else "Trend Downward" for i in range(len(y))]
-    y = np.array(y[-264:])
+    y = np.array(y[-132:])
+    y_dates = y_dates[-132:]
 
     model_files = os.listdir(model_dir)
     model_files = [model_dir + path.sep + x for x in model_files if x.startswith(f"{ticker}_") and x.endswith('.svm')]
@@ -144,11 +135,24 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
             logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
                                                       f"Skipping prediction generation for this model")
             continue
-        generated_predictions = model.predict(combined_x[-265:])
+        prediction_input_data = combined_x[-133:]
+        generated_predictions = model.predict(prediction_input_data)
+        prediction_dates = x_dates[-len(generated_predictions):]
         correct_predictions = 0
-        for i in range(len(y)):
-            if generated_predictions[i] == y[i]:
-                correct_predictions += 1
+        prediction_info_out_format = "Prediction Date: {0}\nPrediction Input Data: {1}\n" \
+                                     "Predicted Date: {2}\nPrediction: {3}\nPrediction Status: {4}\n\n"
+        with open(model_path.replace('.svm', '.predict_info'), 'w') as open_file:
+            status_history = ""
+            for i in range(len(y)):
+                prediction_status = "I"
+                if generated_predictions[i] == y[i]:
+                    correct_predictions += 1
+                    prediction_status = "C"
+                info_out = prediction_info_out_format.format(prediction_dates[i], prediction_input_data[i],
+                                                             y_dates[i], generated_predictions[i], prediction_status)
+                status_history += prediction_status
+                open_file.write(info_out)
+            open_file.write(status_history)
         accuracy = correct_predictions / len(y)
         accuracies.append(accuracy)
         predictions.append(generated_predictions[-1])
@@ -237,7 +241,8 @@ class SvmManager(data_provider_registry.DataConsumerBase):
                 [block_length],
                 data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
                 prediction_string_serializer=string_serialize_predictions,
-                data_exportation_function=export_predictions
+                data_exportation_function=export_predictions,
+                keyword_args={'ema_period': [5, 10, 15]}
             )
 
     def write_default_configuration(self, section: "SectionProxy"):

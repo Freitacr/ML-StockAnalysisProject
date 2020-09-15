@@ -42,13 +42,13 @@ def _insert_into_best_model_array(best_model_array: List[Tuple[Any, float]], mod
 
 def create_random_forest(input_data, target_data, val_input_data, val_target_data
                          ) -> List[ensemble.RandomForestClassifier]:
-    highest_accuracy_models: List[Tuple[Any, float]] = [(None, 0), (None, 0), (None, 0)]
+    highest_accuracy_models: List[Tuple[Any, float]] = [(None, 0)]
     criterion = ['gini', 'entropy']
     for split_criterion in criterion:
-        for i in range(2, 11):
+        for i in range(2, 6):
             forest_size = 200
-            for j in range(1, 11):
-                divisive_factor = 10
+            for j in range(1, 6):
+                divisive_factor = 5
                 samples = None if j / divisive_factor == 1 else j / divisive_factor
                 model = ensemble.RandomForestClassifier(n_estimators=forest_size, min_samples_split=i,
                                                         max_samples=samples, criterion=split_criterion)
@@ -69,7 +69,7 @@ def test_forest_accuracy(val_input_data, val_target_data, model) -> float:
 
 def handle_model_creation(ticker, training_data, out_dir, overwrite_model, combined_examples=1):
     model_file_path = out_dir + f"{path.sep}{ticker}" + "_{0}.randomforest"
-    x, y = training_data
+    x, y, _, _ = training_data
     x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
@@ -79,12 +79,12 @@ def handle_model_creation(ticker, training_data, out_dir, overwrite_model, combi
 
     y = [np.argmax(y[i]) for i in range(len(y))]
 
-    validation_split = .2
+    validation_split = .1
     validation_examples = math.floor(validation_split * len(combined_x))
     valid_x = combined_x[-validation_examples:]
     valid_y = y[-validation_examples:]
-    y = y[:validation_examples]
-    combined_x = combined_x[:validation_examples]
+    y = y[:-validation_examples]
+    combined_x = combined_x[:-validation_examples]
 
     models = create_random_forest(combined_x, y, valid_x, valid_y)
     for i in range(len(models)):
@@ -107,7 +107,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
         return None
-    x, y = prediction_data
+    x, y, _, _ = prediction_data
     x = x.T
 
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
@@ -117,7 +117,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         combined_x[i] = examples
 
     y = [np.argmax(y[i]) for i in range(len(y))]
-    y = np.array(y[-264:])
+    y = np.array(y[-132:])
 
     model_files = os.listdir(model_dir)
     model_files = [model_dir + path.sep + x for x in model_files
@@ -132,7 +132,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
             logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
                                                       f"Skipping prediction generation for this stock")
             return None
-        generated_predictions = model.predict(combined_x[-265:])
+        generated_predictions = model.predict(combined_x[-133:])
         correct_predictions = 0
         for i in range(len(y)):
             if generated_predictions[i] == y[i]:
@@ -231,7 +231,8 @@ class RandomForestManager(data_provider_registry.DataConsumerBase):
                 [block_length],
                 data_provider_static_names.TREND_DETERMINISTIC_BLOCK_PROVIDER_ID,
                 prediction_string_serializer=string_serialize_predictions,
-                data_exportation_function=export_predictions
+                data_exportation_function=export_predictions,
+                keyword_args={'ema_period': [10, 15, 20]}
             )
 
     def write_default_configuration(self, section: "SectionProxy"):
