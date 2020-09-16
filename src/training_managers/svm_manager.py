@@ -31,7 +31,7 @@ _TDP_BLOCK_LENGTH_IDENTIFIER = "trend deterministic data provider block length"
 _CONFIGURABLE_IDENTIFIERS = [_ENABLED_CONFIGURATION_IDENTIFIER, _OVERWRITE_EXISTING_CONFIG_ID,
                              _EXAMPLE_COMBINATION_FACTOR_IDENTIFIER, _TDP_BLOCK_LENGTH_IDENTIFIER]
 
-_CONFIGURATION_DEFAULTS = ['False', 'False', '22', '2520']
+_CONFIGURATION_DEFAULTS = ['False', 'False', '1', '2520']
 
 
 def _insert_into_best_model_array(best_model_array: List[Tuple[Any, float]], model, accuracy):
@@ -70,7 +70,6 @@ def test_svm_accuracy(
 def handle_data(ticker, training_data, out_dir, overwrite_model, combined_examples=22):
     model_file_path = out_dir + f"{path.sep}{ticker}" + "_{0}.svm"
     x, y, x_dates, y_dates = training_data
-    x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
         examples = x[i:i + combined_examples]
@@ -110,8 +109,7 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
         return None
-    x, y, x_dates, y_dates = prediction_data
-    x = x.T
+    x, y, x_dates, y_dates, unknown_x, unknown_dates = prediction_data
 
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
@@ -135,7 +133,7 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
             logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
                                                       f"Skipping prediction generation for this model")
             continue
-        prediction_input_data = combined_x[-133:]
+        prediction_input_data = combined_x[-132:]
         generated_predictions = model.predict(prediction_input_data)
         prediction_dates = x_dates[-len(generated_predictions):]
         correct_predictions = 0
@@ -155,7 +153,8 @@ def predict_data(ticker, model_dir, prediction_data, combined_examples=22):
             open_file.write(status_history)
         accuracy = correct_predictions / len(y)
         accuracies.append(accuracy)
-        predictions.append(generated_predictions[-1])
+
+        predictions.append(model.predict(unknown_x)[-1])
     return ticker, predictions, accuracies
 
 

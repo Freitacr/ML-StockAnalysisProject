@@ -31,6 +31,174 @@ from stock_data_analysis_module.indicators import stochastic_oscillator
 _ENABLED_CONFIG_ID = 'enabled'
 
 
+def _generate_target_data(*args, **kwargs):
+    padded_block_length = args[-2]
+    end_date = args[-1]
+    data_retriever = period_data_retriever.PeriodDataRetriever(
+        [stock_data_table.CLOSING_PRICE_COLUMN_NAME, stock_data_table.HISTORICAL_DATE_COLUMN_NAME],
+        end_date
+    )
+    ret_target_data = {}
+    for ticker, _ in data_retriever.data_sources.items():
+        ticker_data = data_retriever.retrieve_data(ticker, max_rows=padded_block_length)
+        ticker_data = np.array(ticker_data)
+        close = ticker_data[:, 0]
+        close = np.array(list(reversed(close)), dtype=np.float32)
+        hist_dates = ticker_data[:, 1]
+        hist_dates = np.array(list(reversed(hist_dates)))
+
+        if not kwargs['trend_strength_labelling']:
+            actual_trends = []
+            for i in range(1, len(close)):
+                if close[i] >= close[i-1]:
+                    actual_trends.append([0, 1])
+                else:
+                    actual_trends.append([1, 0])
+        else:
+            actual_trends = []
+            for i in range(1, len(close)):
+                percentage_diff = (close[i] - close[i-1]) / close[i-1]
+                if percentage_diff >= .01:
+                    actual_trends.append([0, 0, 0, 0, 1])
+                elif percentage_diff >= .005:
+                    actual_trends.append([0, 0, 0, 1, 0])
+                elif percentage_diff >= -.005:
+                    actual_trends.append([0, 0, 1, 0, 0])
+                elif percentage_diff >= -.01:
+                    actual_trends.append([0, 1, 0, 0, 0])
+                else:
+                    actual_trends.append([1, 0, 0, 0, 0])
+        actual_trends = np.array(actual_trends)
+        trend_dates = hist_dates[:-1]
+        date_keyed_trends = {}
+        for i in range(len(trend_dates)):
+            date_keyed_trends[trend_dates[i]] = actual_trends[i]
+        ret_target_data[ticker] = (date_keyed_trends, np.array(trend_dates))
+    return ret_target_data
+
+
+def _generate_training_data(*args, **kwargs):
+    padded_block_length = args[-3]
+    end_date = args[-2]
+    minimum_examples = args[-1]
+    data_retriever = period_data_retriever.PeriodDataRetriever(
+        [
+            stock_data_table.HIGH_PRICE_COLUMN_NAME,
+            stock_data_table.LOW_PRICE_COLUMN_NAME,
+            stock_data_table.CLOSING_PRICE_COLUMN_NAME,
+            stock_data_table.HISTORICAL_DATE_COLUMN_NAME
+        ],
+        end_date
+    )
+    ret_training_data = {}
+    for ticker, _ in data_retriever.data_sources.items():
+        ticker_data = data_retriever.retrieve_data(ticker, max_rows=padded_block_length)
+        ticker_data = np.array(ticker_data)
+
+        high = ticker_data[:, 0]
+        low = ticker_data[:, 1]
+        close = ticker_data[:, 2]
+        hist_dates = ticker_data[:, 3]
+
+        high = np.array(list(reversed(high)), dtype=np.float32)
+        low = np.array(list(reversed(low)), dtype=np.float32)
+        close = np.array(list(reversed(close)), dtype=np.float32)
+        hist_dates = np.array(list(reversed(hist_dates)))
+
+        if len(high) < minimum_examples:
+            len_warning = (
+                    "Could not process %s into an indicator block, "
+                    "needed %d days of trading data but received %d" %
+                    (ticker, minimum_examples, len(high))
+            )
+            logger.logger.log(logger.WARNING, len_warning)
+            ret_training_data[ticker] = None, None
+            continue
+
+        sma = moving_average.SMA(close, kwargs['sma_period'])
+        for i in range(len(sma) - 1):
+            sma[i] = 1 if sma[i] <= sma[i + 1] else -1
+        sma = sma[:-1]
+
+        wma = moving_average.WMA(close, kwargs['wma_period'])
+        for i in range(len(wma) - 1):
+            wma[i] = 1 if wma[i] <= wma[i + 1] else -1
+        wma = wma[:-1]
+
+        emas = []
+        for period in kwargs['ema_period']:
+            ema = moving_average.EMA(close, period)
+            for i in range(len(ema) - 1):
+                ema[i] = 1 if ema[i] <= ema[i + 1] else -1
+            emas.append(ema[:-1].flatten())
+
+        macd_ema_1 = moving_average.EMA(close, kwargs['macd_ema_1_period'])
+        macd_ema_2 = moving_average.EMA(close, kwargs['macd_ema_2_period'])
+        macd_ema_2 = macd_ema_2[-len(macd_ema_1):]
+        macd = macd_ema_2 - macd_ema_1
+        for i in range(len(macd) - 1):
+            macd[i] = 1 if macd[i] <= macd[i + 1] else -1
+        macd = macd[:-1]
+
+        price_momentum = momentum.momentum(close, kwargs['momentum_period'])
+        for i in range(len(price_momentum) - 1):
+            price_momentum[i] = 1 if price_momentum[i] <= price_momentum[i + 1] else -1
+        price_momentum = price_momentum[:-1]
+
+        roc = rate_of_change.rate_of_change(close, kwargs['rate_of_change_period'])
+        for i in range(len(roc) - 1):
+            roc[i] = 1 if roc[i] <= roc[i + 1] else -1
+        roc = roc[:-1]
+
+        oscillator = stochastic_oscillator.stochastic_oscillator(close, high,
+                                                                 low, kwargs['oscillator_period'])
+        for i in range(len(oscillator) - 1):
+            if oscillator[i + 1] >= 80:
+                oscillator[i] = -1
+            elif oscillator[i + 1] <= 20:
+                oscillator[i] = 1
+            else:
+                oscillator[i] = 1 if oscillator[i] <= oscillator[i + 1] else -1
+        oscillator = oscillator[:-1]
+
+        cci = commodity_channel_index.commodity_channel_index(close, high,
+                                                              low, kwargs['cci_period'])
+
+        for i in range(len(cci) - 1):
+            if cci[i + 1] >= 200:
+                cci[i] = -1
+            elif cci[i + 1] <= -200:
+                cci[i] = 1
+            else:
+                cci[i] = 1 if cci[i] <= cci[i + 1] else -1
+        cci = cci[:-1]
+
+        ad_oscillator = stochastic_oscillator.ad_oscillator(close, high, low)
+        for i in range(len(ad_oscillator) - 1):
+            ad_oscillator[i] = 1 if ad_oscillator[i] <= ad_oscillator[i + 1] else -1
+        ad_oscillator = ad_oscillator[:-1]
+
+        stock_data_block = [sma, wma]
+        stock_data_block.extend(emas)
+        stock_data_block.extend([macd.flatten(), price_momentum, roc, oscillator, ad_oscillator, cci])
+        min_len = len(sma)
+        for data in stock_data_block:
+            if min_len > len(data):
+                min_len = len(data)
+        for i in range(len(stock_data_block)):
+            stock_data_block[i] = stock_data_block[i][-min_len:]
+
+        stock_data_block = np.array(stock_data_block).T
+
+        data_block_dates = hist_dates[-min_len:]
+
+        keyed_data_entries = {}
+        for i in range(len(stock_data_block)):
+            keyed_data_entries[data_block_dates[i]] = stock_data_block[i]
+        ret_training_data[ticker] = (keyed_data_entries, np.array(data_block_dates))
+    return ret_training_data
+
+
 class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
 
     def _generate_agnostic_data(self, *args, **kwargs):
@@ -54,149 +222,52 @@ class TrendDeterministicBlockProvider(data_provider_registry.DataProviderBase):
         max_additional_period += 1
 
         padded_data_block_length = max_additional_period + data_block_length
-        end_date = datetime.datetime.now().isoformat()[:10].replace('-', '/')
-        data_retriever = period_data_retriever.PeriodDataRetriever(
-            [
-                stock_data_table.HIGH_PRICE_COLUMN_NAME,
-                stock_data_table.LOW_PRICE_COLUMN_NAME,
-                stock_data_table.CLOSING_PRICE_COLUMN_NAME,
-                stock_data_table.HISTORICAL_DATE_COLUMN_NAME
-            ],
-            end_date
-        )
+
         ret_blocks = {}
-        for ticker, _ in data_retriever.data_sources.items():
-            ticker_data = data_retriever.retrieve_data(ticker, max_rows=padded_data_block_length)
-            ticker_data = np.array(ticker_data)
-            high = ticker_data[:, 0]
-            high = np.array(list(reversed(high)), dtype=np.float32)
-            low = ticker_data[:, 1]
-            low = np.array(list(reversed(low)), dtype=np.float32)
-            close = ticker_data[:, 2]
-            close = np.array(list(reversed(close)), dtype=np.float32)
-            hist_dates = np.array(list(reversed(ticker_data[:, 3])))
-            if len(high) <= max_additional_period:
-                len_warning = (
-                        "Could not process %s into an indicator block, "
-                        "needed %d days of trading data but received %d" %
-                        (ticker, max_additional_period, len(high))
-                )
-                logger.logger.log(logger.WARNING, len_warning)
+        end_date = datetime.datetime.now().isoformat()[:10].replace('-', '/')
+        training_data = _generate_training_data(
+            *args, padded_data_block_length, end_date, data_block_length//2,
+            **kwargs
+        )
+        target_data = _generate_target_data(*args, padded_data_block_length, end_date, **kwargs)
+        for ticker in training_data.keys():
+            keyed_data_entries, data_block_dates = training_data[ticker]
+            date_keyed_trends, trend_dates = target_data[ticker]
+
+            if keyed_data_entries is None:
                 continue
-
-            if not kwargs['trend_strength_labelling']:
-                actual_trends = [[0, 1] if close[i] < close[i + 1] else [1, 0] for i in range(len(close) - 1)]
-            else:
-                actual_trends = []
-                for i in range(len(close)-1):
-                    percentage_diff = (close[i + 1] - close[i]) / close[i]
-                    if percentage_diff >= .01:
-                        actual_trends.append([0, 0, 0, 0, 1])
-                    elif percentage_diff >= .005:
-                        actual_trends.append([0, 0, 0, 1, 0])
-                    elif percentage_diff >= -.005:
-                        actual_trends.append([0, 0, 1, 0, 0])
-                    elif percentage_diff >= -.01:
-                        actual_trends.append([0, 1, 0, 0, 0])
-                    else:
-                        actual_trends.append([1, 0, 0, 0, 0])
-
-            trend_dates = [hist_dates[i+1] for i in range(len(close) - 1)]
 
             trend_lookahead = kwargs['trend_lookahead']
             # trend_lookahead += 1
-            data_block_slice = slice(-data_block_length - 1, -1)
 
-            sma = moving_average.SMA(close, kwargs['sma_period'])
-            for i in range(len(sma)-1):
-                sma[i] = 1 if sma[i] <= sma[i+1] else -1
-            sma = sma[data_block_slice]
+            ret_block = []
+            ret_block_dates = []
+            ret_trends = []
+            ret_trend_dates = []
 
-            data_block_dates = hist_dates[-len(sma):]
+            for i in range(len(data_block_dates)):
+                if i + trend_lookahead >= len(data_block_dates):
+                    break
+                if data_block_dates[i+trend_lookahead] not in date_keyed_trends:
+                    continue
+                training_date = data_block_dates[i]
+                prediction_date = data_block_dates[i + trend_lookahead]
 
-            wma = moving_average.WMA(close, kwargs['wma_period'])
-            for i in range(len(wma)-1):
-                wma[i] = 1 if wma[i] <= wma[i+1] else -1
-            wma = wma[data_block_slice]
+                ret_block.append(keyed_data_entries[training_date])
+                ret_trends.append(date_keyed_trends[prediction_date])
 
-            emas = []
-            for period in kwargs['ema_period']:
-                ema = moving_average.EMA(close, period)
-                for i in range(len(ema)-1):
-                    ema[i] = 1 if ema[i] <= ema[i+1] else -1
-                emas.append(ema[data_block_slice].flatten())
+                ret_block_dates.append(training_date)
+                ret_trend_dates.append(prediction_date)
 
-            macd_ema_1 = moving_average.EMA(close, kwargs['macd_ema_1_period'])
-            macd_ema_2 = moving_average.EMA(close, kwargs['macd_ema_2_period'])
-            macd_ema_2 = macd_ema_2[-len(macd_ema_1):]
-            macd = macd_ema_2 - macd_ema_1
-            for i in range(len(macd)-1):
-                macd[i] = 1 if macd[i] <= macd[i+1] else -1
-            macd = macd[data_block_slice]
-
-            price_momentum = momentum.momentum(close, kwargs['momentum_period'])
-            for i in range(len(price_momentum)-1):
-                price_momentum[i] = 1 if price_momentum[i] <= price_momentum[i+1] else -1
-            price_momentum = price_momentum[data_block_slice]
-
-            roc = rate_of_change.rate_of_change(close, kwargs['rate_of_change_period'])
-            for i in range(len(roc)-1):
-                roc[i] = 1 if roc[i] <= roc[i+1] else -1
-            roc = roc[data_block_slice]
-
-            oscillator = stochastic_oscillator.stochastic_oscillator(close, high,
-                                                                     low, kwargs['oscillator_period'])
-            for i in range(len(oscillator)-1):
-                if oscillator[i+1] >= 80:
-                    oscillator[i] = -1
-                elif oscillator[i+1] <= 20:
-                    oscillator[i] = 1
-                else:
-                    oscillator[i] = 1 if oscillator[i] <= oscillator[i+1] else -1
-            oscillator = oscillator[data_block_slice]
-
-            cci = commodity_channel_index.commodity_channel_index(close, high,
-                                                                  low, kwargs['cci_period'])
-
-            for i in range(len(cci)-1):
-                if cci[i+1] >= 200:
-                    cci[i] = -1
-                elif cci[i+1] <= -200:
-                    cci[i] = 1
-                else:
-                    cci[i] = 1 if cci[i] <= cci[i+1] else -1
-            cci = cci[data_block_slice]
-
-            ad_oscillator = stochastic_oscillator.ad_oscillator(close, high, low)
-            for i in range(len(ad_oscillator)-1):
-                ad_oscillator[i] = 1 if ad_oscillator[i] <= ad_oscillator[i+1] else -1
-            ad_oscillator = ad_oscillator[data_block_slice]
-
-            stock_data_block = [sma, wma]
-            stock_data_block.extend(emas)
-            stock_data_block.extend([macd.flatten(), price_momentum, roc, oscillator, ad_oscillator, cci])
-            min_len = len(sma)
-            for data in stock_data_block:
-                if min_len > len(data):
-                    min_len = len(data)
-            for i in range(len(stock_data_block)):
-                stock_data_block[i] = stock_data_block[i][-min_len:]
-
-            stock_data_block = np.array(stock_data_block)
-            actual_trends = actual_trends[-min_len:]
-
-            trend_dates = trend_dates[-min_len:]
-            data_block_dates = data_block_dates[-min_len:]
-
-            trend_dates = trend_dates[trend_lookahead:]
             if 'predict' not in kwargs:
-                data_block_dates = data_block_dates[:-trend_lookahead]
-                ret_blocks[ticker] = (stock_data_block[:, :-trend_lookahead], np.array(actual_trends[trend_lookahead:]),
-                                      data_block_dates, trend_dates)
+                ret_blocks[ticker] = (np.array(ret_block), np.array(ret_trends),
+                                      np.array(ret_block_dates), np.array(ret_trend_dates))
             else:
-                ret_blocks[ticker] = (stock_data_block, np.array(actual_trends[trend_lookahead:]),
-                                      data_block_dates, trend_dates)
-            print()
+                unknown_data_dates = [x for x in data_block_dates[-trend_lookahead:]]
+                unknown_data = [keyed_data_entries[x] for x in unknown_data_dates]
+                ret_blocks[ticker] = (np.array(ret_block), np.array(ret_trends),
+                                      np.array(ret_block_dates), np.array(ret_trend_dates),
+                                      np.array(unknown_data), np.array(unknown_data_dates))
         return ret_blocks
 
     def generate_data(self, *args, **kwargs):

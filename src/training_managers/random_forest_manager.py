@@ -70,7 +70,6 @@ def test_forest_accuracy(val_input_data, val_target_data, model) -> float:
 def handle_model_creation(ticker, training_data, out_dir, overwrite_model, combined_examples=1):
     model_file_path = out_dir + f"{path.sep}{ticker}" + "_{0}.randomforest"
     x, y, _, _ = training_data
-    x = x.T
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
         examples = x[i:i + combined_examples]
@@ -107,8 +106,7 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
         logger.logger.log(logger.WARNING, f"No model exists to make predictions on data from ticker {ticker}."
                                           f"Skipping prediction generation for this stock.")
         return None
-    x, y, _, _ = prediction_data
-    x = x.T
+    x, y, _, _, unknown_x, unknown_dates = prediction_data
 
     combined_x = np.zeros((len(x) - combined_examples + 1, len(x[0]) * combined_examples))
     for i in range(len(x) - combined_examples + 1):
@@ -132,14 +130,14 @@ def predict_using_models(ticker, model_dir, prediction_data, combined_examples=1
             logger.logger.log(logger.NON_FATAL_ERROR, f"Failed to open and unpickle {model_path}."
                                                       f"Skipping prediction generation for this stock")
             return None
-        generated_predictions = model.predict(combined_x[-133:])
+        generated_predictions = model.predict(combined_x[-132:])
         correct_predictions = 0
         for i in range(len(y)):
             if generated_predictions[i] == y[i]:
                 correct_predictions += 1
         accuracy = correct_predictions / len(y)
         accuracies.append(accuracy)
-        predictions.append(generated_predictions[-1])
+        predictions.append(model.predict(unknown_x)[-1])
     return ticker, predictions, accuracies
 
 
