@@ -150,10 +150,10 @@ class ClosingPriceRegressionBlockProvider(data_provider_registry.DataProviderBas
                 else:
                     break
             if 'predict' in kwargs:
-                ret_blocks[ticker] = (stock_data_block[:, -data_block_length:len(closing_prices)],
+                ret_blocks[ticker] = (stock_data_block[:, -data_block_length:len(closing_prices)+1],
                                       closing_prices[-data_block_length:])
             else:
-                ret_blocks[ticker] = (stock_data_block[:, -data_block_length:len(closing_prices)+1],
+                ret_blocks[ticker] = (stock_data_block[:, -data_block_length:len(closing_prices)],
                                       closing_prices[-data_block_length:])
         return ret_blocks
 
