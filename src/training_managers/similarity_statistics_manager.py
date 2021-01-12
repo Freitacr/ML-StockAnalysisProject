@@ -1,17 +1,10 @@
-"""Manager for generating reports detailing how previous periods of similar trends continued moving.
-
-"""
 from configparser import ConfigParser, SectionProxy
-import operator
 from os import path
 import os
 import multiprocessing
 from typing import List, Union, Dict, Tuple, Any
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import dates
-from matplotlib import figure
 
 from general_utils.config import config_util
 from general_utils.config import config_parser_singleton
@@ -19,8 +12,7 @@ from data_providing_module import configurable_registry
 from data_providing_module import data_provider_registry
 from data_providing_module.data_providers import data_provider_static_names
 
-
-CONSUMER_ID = 'Similarity Highlight Manager'
+CONSUMER_ID = 'Similarity Statistics Manager'
 _ENABLED_CONFIGURATION_IDENTIFIER = 'enabled'
 _EXAMPLE_COMBINATION_FACTOR_IDENTIFIER = 'Periods Per Example'
 _TDP_BLOCK_LENGTH_IDENTIFIER = "trend deterministic data provider block length"
@@ -32,16 +24,13 @@ _CONFIGURABLE_IDENTIFIERS = [_ENABLED_CONFIGURATION_IDENTIFIER, _EXAMPLE_COMBINA
 _CONFIGURATION_DEFAULTS = ['False', '22', '2520', '8']
 
 
-def _insert_into_best_model_array(best_model_array: List[Tuple[Any, float]], model, accuracy):
-    best_model_array.append((model, accuracy))
-    best_model_array.sort(key=operator.itemgetter(1), reverse=True)
-    return best_model_array[1:]
+def _convert_pattern_to_key(pattern: str):
+    return pattern.count('U')
 
 
-# TODO Split output figures into two subplots, the matched region and the highlighted future
-def predict_data(ticker, out_dir, prediction_data, combined_examples=22, num_similar_regions=8):
+def predict_data(ticker, out_dir, prediction_data, combined_examples=22):
     out_folder = out_dir + path.sep + f"{ticker}" + path.sep
-    out_path_format = out_folder + f"{ticker}" + "_{0}_{1:.2f}.jpg"
+    out_path_format = out_folder + f"{ticker}.stat"
     if not path.exists(out_folder):
         os.mkdir(out_folder)
     x, y, x_dates, y_dates, unknown_x, unknown_dates = prediction_data
@@ -52,94 +41,72 @@ def predict_data(ticker, out_dir, prediction_data, combined_examples=22, num_sim
         combined_x[i] = examples
     if isinstance(y[0], np.ndarray):
         y = [np.argmax(y[i]) for i in range(len(y))]
-    y = y[combined_examples-1:]
-    y_dates = y_dates[combined_examples-1:]
-    base_example = np.append(x[-combined_examples+len(unknown_x):], unknown_x)
-    least_different_periods: List[Tuple[Any, float]] = [(None, np.inf) for _ in range(num_similar_regions)]
+    y = y[combined_examples - 1:]
+    y_dates = y_dates[combined_examples - 1:]
+    base_example = np.append(x[-combined_examples + len(unknown_x):], unknown_x)
 
-    figure_data_formatter = dates.DateFormatter('%d-%m-%y')
+    pattern_dict = {}
+    total_dist = 0
+    pattern_length = 5
 
-    # Skip over the most recent combined examples to avoid having a high similarity due to
-    # incorporating most of the base example.
     for i in range(len(combined_x)-combined_examples+1):
         dist = 0
         for j in range(len(combined_x[i])):
             base_dist = (base_example[j] - combined_x[i][j])
             if j > 0:
                 # penalize example if movement direction is different from the base example
-                base_ex_dir = base_example[j] - base_example[j-1]
-                combined_x_dir = combined_x[i][j] - combined_x[i][j-1]
+                base_ex_dir = base_example[j] - base_example[j - 1]
+                combined_x_dir = combined_x[i][j] - combined_x[i][j - 1]
                 base_ex_dir = 1 if abs(base_ex_dir) == base_ex_dir else 0
                 combined_x_dir = 1 if abs(combined_x_dir) == combined_x_dir else 0
                 if not base_ex_dir == combined_x_dir:
                     base_dist *= 2
             dist += base_dist ** 2
         dist **= .5
-        least_different_periods = _insert_into_best_model_array(least_different_periods, i, dist)
-    fig_index = len(least_different_periods)-1
-    for y_index, dist in least_different_periods:
-        y_range_start = max(0, y_index-combined_examples)
-        y_range_hist = y[y_range_start:y_index-len(unknown_x)]
-        y_range_future = y[y_index-len(unknown_x):y_index+combined_examples]
-        y_date_range_hist = list(y_dates[y_range_start: y_index-len(unknown_x)])
-        y_date_range_future = list(y_dates[y_index-len(unknown_x):y_index + combined_examples])
-        if y[y_index] > np.mean(y[y_index+1:y_index+6]):
-            color = "#ff0000"
-        else:
-            color = "#00ff00"
+        if i+pattern_length >= len(combined_x):
+            break
+        last_price = combined_x[i][-1]
+        pattern_x = combined_x[i+pattern_length]
+        pattern = ''
+        for j in range(len(pattern_x)):
+            if pattern_x[j] >= last_price:
+                pattern += 'U'
+            else:
+                pattern += 'D'
+        if pattern not in pattern_dict:
+            pattern_dict[pattern] = 0
+        pattern_dict[pattern] += dist
+        total_dist += dist
 
-        fig: figure.Figure = plt.figure()
-        plt.subplot(211)
-        plt.grid(True)
-        plt.ylabel("Closing Price")
-        axes = fig.axes
-        axes[0].xaxis.set_ticks([y_date_range_hist[0], y_dates[y_index-len(unknown_x)]])
-        axes[0].xaxis.set_major_formatter(figure_data_formatter)
-        axes[0].set_facecolor("#3f3f3f")
-        axes[0].xaxis.label.set_color('#afafaf')
-        axes[0].tick_params(axis='both', colors='#afafaf')
-        axes[0].yaxis.label.set_color('#afafaf')
-        plt.plot(y_date_range_hist, y_range_hist, marker='o', color=color)
-
-        plt.subplot(212)
-        plt.grid(True)
-        plt.xlabel("Date Range")
-        plt.ylabel("Closing Price")
-        axes = fig.axes
-        axes[1].xaxis.set_ticks([y_dates[y_index-len(unknown_x)], y_date_range_future[-1]])
-        axes[1].xaxis.set_major_formatter(figure_data_formatter)
-        axes[1].set_facecolor("#3f3f3f")
-        axes[1].xaxis.label.set_color('#afafaf')
-        axes[1].tick_params(axis='both', colors='#afafaf')
-        axes[1].yaxis.label.set_color("#afafaf")
-        plt.plot(y_date_range_future, y_range_future, marker='o', color=color)
-
-        plt.savefig(out_path_format.format(fig_index, dist), bbox_inches='tight', facecolor="#0f0f0f")
-        fig_index -= 1
-        plt.close()
-
-    known_example_base_range = y_dates[-combined_examples+len(unknown_x):]
-    base_fig = plt.figure()
-    plt.grid(True)
-    plt.xlabel("Date Range")
-    plt.ylabel("Closing Price")
-    axes = base_fig.axes
-    axes[0].xaxis.set_ticks([known_example_base_range[0], known_example_base_range[-1]])
-    axes[0].xaxis.set_major_formatter(figure_data_formatter)
-    axes[0].set_facecolor("#3f3f3f")
-    axes[0].xaxis.label.set_color('#afafaf')
-    axes[0].tick_params(axis='both', colors='#afafaf')
-    axes[0].yaxis.label.set_color('#afafaf')
-    plt.plot(known_example_base_range,
-             y[-combined_examples+len(unknown_x):], marker='o')
-    plt.savefig(out_path_format.format('base', 0.0), bbox_inches='tight', facecolor='#0f0f0f')
-    plt.close()
+    patterns: List[Tuple[str, float]] = []
+    for pattern, distance in pattern_dict.items():
+        patterns.append((pattern, distance))
+    patterns = sorted(patterns, key=_convert_pattern_to_key)
+    percentage_format = "{0:.2f}%"
+    output_record_format = "{0}:{1}\n"
+    with open(out_path_format) as out_file:
+        for pattern, distance in patterns:
+            historical_similarity = 1 - (distance / total_dist)
+            out_record = output_record_format.format(pattern, percentage_format.format(historical_similarity*100))
+            out_file.write(out_record)
 
 
-class SimilarityHighlightingManager(data_provider_registry.DataConsumerBase):
+    # scan through all previous examples, checking their similarity to the base example.
+    # Keep track of the largest difference. This becomes 0% similarity.
+    # Assuming all previous examples were kept track of, the coding will work as follows
+    # For the next x days after the end of the previous example (referred to as x_end), track whether
+    # the price at each of those days are above or below x_end. For a day that it is above x_end, a
+    # U will be added to the code for the example. When it isn't, a D will be added.
+    # Then add %similarity/100 to the total similarity seen and to the tracked code storage dictionary.
+    # All that is left is turning all tracked similarities into percentages using the total similarity.
+
+    # output should be ordered by number of Us in the code.
+
+
+class SimilarityStatisticsManager(data_provider_registry.DataConsumerBase):
 
     def __init__(self):
-        super(SimilarityHighlightingManager, self).__init__()
+        super(SimilarityStatisticsManager, self).__init__()
         configurable_registry.config_registry.register_configurable(self)
         self._combined_examples_factor = 22
         self._num_similar_regions = 8
@@ -195,4 +162,4 @@ class SimilarityHighlightingManager(data_provider_registry.DataConsumerBase):
                 section[_CONFIGURABLE_IDENTIFIERS[i]] = _CONFIGURATION_DEFAULTS[i]
 
 
-consumer = SimilarityHighlightingManager()
+consumer = SimilarityStatisticsManager()
