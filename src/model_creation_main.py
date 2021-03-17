@@ -29,5 +29,3 @@ if __name__ == "__main__":
     if predict and not export_predictions:
         for passback, predictions in ret_predictions.items():
             logger.logger.log(logger.OUTPUT, predictions)
-    elif predict:
-        csv_amalgamation.amalgamate_csvs(args[0])
