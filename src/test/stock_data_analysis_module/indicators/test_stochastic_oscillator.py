@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from src.stock_data_analysis_module.indicators import stochastic_oscillator
+from stock_data_analysis_module.indicators import stochastic_oscillator
 
 
 class StochasticOscillatorTestCase(unittest.TestCase):
